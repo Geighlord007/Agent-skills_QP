@@ -3,12 +3,25 @@
 Thumbs.db
 desktop.ini
 
+# WSL/Windows metadata
+*:Zone.Identifier
+*.Zone.Identifier
+
 # Editor backups
 *~
 *.swp
 *.swo
 .vscode/
 .idea/
+
+# Python bytecode (auto-generated)
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Node/Bun dependencies (regenerate locally)
+**/node_modules/
+**/bun.lock
 
 # Local config
 .env

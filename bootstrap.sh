@@ -10,6 +10,8 @@ SKILL_DIR="$HOME/agent-skills/skills"
 # Only global paths; add yours as needed
 AGENTS=(
   "opencode:$HOME/.config/opencode/skills"
+  "kimi-code:$HOME/.kimi-code/skills"
+  "openclaw:$HOME/.openclaw/skills"
   "claude-code:$HOME/.claude/skills"
   "codex:$HOME/.codex/skills"
   "cursor:$HOME/.cursor/skills"
