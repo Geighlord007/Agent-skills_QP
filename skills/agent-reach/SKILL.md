@@ -23,6 +23,26 @@ Upstream tools for 13+ platforms. Call them directly.
 
 Run `agent-reach doctor` to check which channels are available.
 
+> ## 📌 本机环境备注（2026-08 实测，优先以此为准）
+>
+> 配套脚本在本 skill 目录的 `scripts/` 下（雪球讨论区、小红书用户搜索）。
+>
+> **本机已验证可用的六平台后端**：Bilibili（yt-dlp + bili CLI）、微博（mcporter→mcp-server-weibo）、
+> 抖音（mcporter→douyin-mcp-server）、雪球（Cookie + API/Playwright）、Twitter（twitter CLI + 代理）、
+> 小红书（mcporter→xiaohongshu-mcp 本地服务）。
+>
+> - **网络**：PyPI 一律走清华镜像 `-i https://pypi.tuna.tsinghua.edu.cn/simple`（pipx 内部用 uv，需 `UV_DEFAULT_INDEX`）；
+>   GitHub 下载用 curl 或代理。本机代理为 `http://127.0.0.1:7890`（Molly），Twitter 必须走它。
+> - **微博/抖音不在 agent-reach 包里**：是手动注册到 mcporter 的社区 MCP 服务（见 `~/.mcporter/mcporter.json`）。
+>   微博免登录；抖音免登录但 venv 内有补丁（见下方抖音节）。
+> - **小红书**：服务不在时需先启动：`cd ~/.agent-reach/tools/xiaohongshu-mcp && nohup ./xiaohongshu-mcp > /tmp/xhs-mcp.log 2>&1 &`
+>   启动时不能带代理变量。用 v2.4.3，v2.5.0 在本机段错误。无用户搜索工具，搜用户用本 skill 目录 `scripts/xhs_search_user.py`。
+> - **雪球**：行情 API 带 Cookie 直连即可；个股讨论区有 WAF，用本 skill 目录 `scripts/xueqiu_stock_comments.py`。
+> - **微信公众号（2026-08-14 新增可用）**：`python3 本skill目录/scripts/wechat_read.py <文章URL>`。
+>   curl/普通 Chrome 都会被 TCaptcha 墙拦，只有 Camoufox 能过（本机已修复，见下方公众号节）。
+> - **Cookie 过期**：B站/雪球重新登录 Chrome 后 `agent-reach configure --from-browser chrome --platform <平台>`；
+>   Twitter/小红书用 Cookie-Editor 导出后更新对应配置（小红书改完要重启服务）。
+
 ## ⚠️ Workspace Rules
 
 **Never create files in the agent workspace.** Use `/tmp/` for temporary output and `~/.agent-reach/` for persistent data.
@@ -40,14 +60,22 @@ mcporter call 'exa.web_search_exa(query: "query", numResults: 5)'
 mcporter call 'exa.get_code_context_exa(query: "code question", tokensNum: 3000)'
 ```
 
-## Twitter/X (bird)
+## Twitter/X (twitter-cli)
 
 ```bash
-bird search "query" -n 10                  # search
-bird read URL_OR_ID                        # read tweet (supports /status/ and /article/ URLs)
-bird user-tweets @username -n 20           # user timeline
-bird thread URL_OR_ID                      # full thread
+# 需先配置 Cookie（见下方说明），然后在同一 shell 中导出环境变量：
+export TWITTER_AUTH_TOKEN="..."
+export TWITTER_CT0="..."
+twitter search "query" -n 10                  # search
+twitter read URL_OR_ID                        # read tweet
+twitter user-tweets @username -n 20           # user timeline
 ```
+
+> 获取 Cookie：Chrome 登录 x.com → Cookie-Editor 扩展 → Export → Header String，
+> 然后运行 `agent-reach configure twitter-cookies` 保存。
+> 注意：SKILL.md 旧版写的 `bird` 已弃用，本机安装的是 twitter-cli（命令为 `twitter`）。
+> 本机备注：twitter-cli 必须走代理，本机代理为 `http://127.0.0.1:7890`（Molly），
+> 使用前 `export HTTPS_PROXY=http://127.0.0.1:7890 HTTP_PROXY=http://127.0.0.1:7890`。
 
 ## YouTube (yt-dlp)
 
@@ -92,10 +120,16 @@ gh issue view 123 -R owner/repo
 mcporter call 'xiaohongshu.search_feeds(keyword: "query")'
 mcporter call 'xiaohongshu.get_feed_detail(feed_id: "xxx", xsec_token: "yyy")'
 mcporter call 'xiaohongshu.get_feed_detail(feed_id: "xxx", xsec_token: "yyy", load_all_comments: true)'
-mcporter call 'xiaohongshu.publish_content(title: "标题", content: "正文", images: ["/path/img.jpg"], tags: ["tag"])'
 ```
 
-> Requires login. Use Cookie-Editor to import cookies.
+> 本机后端（2026-08 实测可用）：xiaohongshu-mcp v2.4.3 本地服务。
+> 注意 v2.5.0 的 linux 二进制在本机会段错误，勿升级。
+> 启动方式（服务不在时先启动）：
+> ```bash
+> cd ~/.agent-reach/tools/xiaohongshu-mcp && nohup ./xiaohongshu-mcp > /tmp/xhs-mcp.log 2>&1 &
+> ```
+> Cookie 存于 `~/.agent-reach/tools/xiaohongshu-mcp/cookies.json`（改后需重启服务生效）。
+> 启动时务必不要带 HTTP(S)_PROXY（小红书是国内站，走代理会导致页面加载超时）。
 
 > **Tip: Clean bloated output.** XHS API returns large JSON with many unused fields.
 > Pipe through the formatter to save context:
@@ -112,30 +146,39 @@ mcporter call 'douyin.get_douyin_download_link(share_link: "https://v.douyin.com
 ```
 
 > No login needed.
+> ⚠️ 本机备注（2026-08）：douyin-mcp-server 与 mcp 2.x 不兼容，venv 内需 `mcp<2`
+> （`pipx inject douyin-mcp-server 'mcp<2' --force`）；且抖音有蜘蛛检测，
+> venv 里的 `server.py` 已打补丁（先访问 iesdouyin.com 主站拿会话 Cookie + 带 Referer）。
+> 若 `pipx reinstall/upgrade douyin-mcp-server` 后失效，需重新打这两个补丁。
 
 ## 微信公众号 / WeChat Articles
 
-**Search** (miku_ai):
+**Search** (miku_ai，本机已装，系统 python3 直接可用，2026-08-14 实测):
 ```bash
-# miku_ai is installed inside the agent-reach Python environment.
-# Use the same interpreter that runs agent-reach (handles pipx / venv installs):
-AGENT_REACH_PYTHON=$(python3 -c "import agent_reach, sys; print(sys.executable)" 2>/dev/null || echo python3)
-$AGENT_REACH_PYTHON -c "
+python3 -c "
 import asyncio
 from miku_ai import get_wexin_article
 async def s():
-    for a in await get_wexin_article(\'query\', 5):
-        print(f\'{a[\"title\"]} | {a[\"url\"]}\')
+    for a in await get_wexin_article('关键词', 5):
+        print(f'{a[\"title\"]} | {a[\"url\"]}')
 asyncio.run(s())
 "
 ```
+> 返回的是带签名和时间戳的临时链接（几小时内有效），可直接喂给 wechat_read.py 读正文。
 
-**Read** (Camoufox — bypasses WeChat anti-bot):
+**Read**（本机可用，2026-08-14 实测）：
 ```bash
-cd ~/.agent-reach/tools/wechat-article-for-ai && python3 main.py "https://mp.weixin.qq.com/s/ARTICLE_ID"
+python3 ~/.kimi-code/skills/agent-reach/scripts/wechat_read.py "https://mp.weixin.qq.com/s/ARTICLE_ID"
 ```
 
-> WeChat articles cannot be read with Jina Reader or curl. Must use Camoufox.
+> WeChat articles cannot be read with Jina Reader or curl（会弹 TCaptcha 验证码墙 / poc_token 挑战）。
+> 本机用 Camoufox（反指纹 Firefox）自动过挑战。
+> ⚠️ 本机 Camoufox 0.5.4 有两处手动修复，pip 升级 camoufox 后会失效需重做：
+> 1. uBlock 插件手动安装：官方下载直连返回 451，需走代理下载 xpi 并**解压**到
+>    `~/.cache/camoufox/addons/UBO/`（解压后的目录，含 manifest.json，不是 xpi 文件本身）。
+> 2. `camoufox/pkgman.py` 的 `Version.is_supported()` 版本门对新命名格式误判导致无限递归，
+>    已补丁为直接返回 True。
+> 旧路径 `~/.agent-reach/tools/wechat-article-for-ai` 从未安装，忽略。
 
 ## 微博 / Weibo (mcporter)
 
@@ -287,7 +330,9 @@ for s in hot:
     print(f"#{s['rank']} {s['name']} ({s['symbol']}): {s['current']} ({s['percent']}%)")
 ```
 
-> 无需登录。自动获取会话 Cookie，所有公开 API 均可直接使用。
+> ⚠️ 2026-08 实测：雪球已不再发游客 token，`XueqiuChannel` 免登录路径返回 400016。
+> 必须先在 Chrome 登录 xueqiu.com，然后运行
+> `agent-reach configure --from-browser chrome --platform xueqiu` 导入登录 Cookie。
 
 ## RSS (feedparser)
 
