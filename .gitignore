@@ -26,3 +26,6 @@ desktop.ini
 # Local config
 .env
 .env.local
+
+# Third-party tools cloned locally, not versioned here
+tools/
