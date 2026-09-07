@@ -14,7 +14,7 @@ description: >
 
 ## 本机安装位置
 
-- 代码：`~/agent-skills/tools/cli-in-wechat/`（**不进 git**，`.gitignore` 已排除 `tools/`；
+- 代码：`~/.agents/skills/tools/cli-in-wechat/`（**不进 git**，`.gitignore` 已排除 `tools/`；
   升级用 `git -C 该目录 pull && npm install`）
 - 配置：`~/.wx-ai-bridge/config.json`（首次运行后生成）
 - 依赖已装好（`npm install` 已完成，含可选依赖 undici 代理支持）
@@ -28,10 +28,10 @@ description: >
 
 ```bash
 # 前台调试（首次启动用前台，会显示登录二维码，用微信扫码）
-cd ~/agent-skills/tools/cli-in-wechat && npm run dev
+cd ~/.agents/skills/tools/cli-in-wechat && npm run dev
 
 # 日常后台运行
-cd ~/agent-skills/tools/cli-in-wechat && nohup npm run dev > /tmp/wechat-bridge.log 2>&1 &
+cd ~/.agents/skills/tools/cli-in-wechat && nohup npm run dev > /tmp/wechat-bridge.log 2>&1 &
 
 # 停止
 pkill -f cli-in-wechat
