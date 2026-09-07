@@ -73,6 +73,13 @@ new Table(
     new TableGrid(...));        // sibling, child of Table
 ```
 
+**Element Ordering (XSD sequence) → "unexpected child element ..."**: OpenXML enforces a strict child-element order per schema; wrong order fails `Validator.dll` even though Word tolerates it. The skill's `validate_all.py` auto-fixes this, but it depends on a Linux-only `.so`, so **on Windows you must emit the correct order yourself** (or port the fixer to pure Python). Confirmed orders — use centralized helpers (`MkRunProps`/`MkParaProps`) so you never hand-order children:
+
+- **rPr**: `rFonts → b → i → color → spacing → sz` (color BEFORE sz; rFonts FIRST)
+- **pPr**: `keepNext → shd → spacing → ind → jc` (shd BEFORE spacing; jc AFTER ind — counter-intuitive)
+- **tblBorders**: `top → left → bottom → right → insideH → insideV` (left BEFORE bottom)
+- **sectPr**: `headerRef → footerRef → sectType → pgSz → pgMar → titlePg` (refs BEFORE pgSz/pgMar; TitlePage LAST after pgMar — and it's `TitlePage`, NOT `DifferentFirstPage` which doesn't exist)
+
 ## Color & Typography
 
 Pick ONE hue direction, stay within it. Build a 3-tier system: Primary (headings) / Dark (body text) / Light (captions). Cover/backcover text must visibly contrast with background — dark bg needs white or light text.
