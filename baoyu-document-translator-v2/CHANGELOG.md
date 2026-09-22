@@ -1,5 +1,20 @@
 # CHANGELOG — baoyu-document-translator-v2
 
+## 2.2.2 (2026-09-22) — XLSX support (shared-string level) + guide update
+
+### Added
+- scripts/xlsx_translate.py: translate an .xlsx by rewriting ONLY xl/sharedStrings.xml text
+  nodes and xl/workbook.xml sheet names — styles, number formats, charts, images, formulas
+  and column geometry are untouched. Prints a before/after CJK scan and validates every XML
+  part with lxml.
+- GUIDE.md: new "翻 Excel（XLSX）怎么办" section; two documented gotchas — Excel caps sheet
+  names at 31 characters, and an ampersand in a sheet name must be written as &amp; in XML.
+
+### Verified on a real workbook
+- 12 shared strings + 1 sheet name translated; before: 24 CJK chars + Chinese sheet name;
+  after: zero CJK in text; all XML parts parse; openpyxl opens the file with no warnings;
+  cell spot-checks (B1/B2/F2/B20) read back correctly.
+
 ## 2.2.1 (2026-09-22) — Safe Docx evaluation + tracked-output notes (docs only)
 
 ### Added

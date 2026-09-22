@@ -1,4 +1,4 @@
-# 一页纸说明 — baoyu-document-translator-v2（v2.2.0）
+# 一页纸说明 — baoyu-document-translator-v2（v2.2.2）
 
 ## 这个 skill 干什么
 
@@ -57,6 +57,23 @@ python scripts/engine_select.py     # 打印 {"recommended": "wir" | "surgical"}
 - `references/subagent-prompt-template.md` — 分块翻译给子代理的提示词模板
 - `references/schema-v2.md` — 中间 JSON 的字段说明
 - `references/wir-integration.md` — WIR 引擎接入说明
+
+## 翻 Excel（XLSX）怎么办
+
+xlsx 和 docx 一样是"zip + XML"，但文字集中放在**共享字符串表**里，所以只要改这一处：
+
+```bash
+# 1) 先看清有哪些文字（sharedStrings 与表名）
+python scripts/xlsx_translate.py <src.xlsx> <tmp.xlsx> <map.json>   # 会打印 before/after 的中文残留
+# map.json: {"strings": {"中文A": "English A", ...}, "sheet_names": {"中文表名": "Sheet Name"}}
+
+# 2) 用真实译文生成输出
+python scripts/xlsx_translate.py 原件.xlsx 输出-EN.xlsx map.json
+```
+
+- 只改文字：**样式、数字格式、列宽行高、图表、图片、公式全部不动**。
+- 两个坑（脚本已在注释里写明）：Excel **表名上限 31 字符**；表名里的 `&` 要写成 `&amp;`。
+- **图片里的文字改不了**（像素），交付时要单独告知客户。
 
 ## 三句话记住怎么用
 

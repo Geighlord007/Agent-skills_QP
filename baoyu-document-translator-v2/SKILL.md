@@ -1,7 +1,7 @@
 ---
 name: baoyu-document-translator-v2
 description: Translate DOCX and PPTX while preserving formatting. Two write-back engines chosen by environment — WIR (compiled engine, Linux/WSL2 first choice) and surgical (pure Python, native Windows/macOS) — plus keyed round-trip, all-story extraction (headers/footers/footnotes/textboxes/tracked insertions), structure-aware merge, and an optional QA pack (structure gate, rendered QA, CJK layout localization, pagination pre-pass, regression selftest).
-version: 2.2.1
+version: 2.2.2
 metadata:
   openclaw:
     homepage: https://github.com/JimLiu/baoyu-skills#baoyu-document-translator-v2
@@ -78,6 +78,7 @@ python scripts/engine_select.py     # 打印 {"recommended": "wir" | "surgical"}
 
 - DOCX：先跑 `engine_select.py` → Linux/WSL2 用 WIR 写回，原生 Windows/macOS 用 surgical。
 - PPTX：用 `extract_pptx_v2.py` / `write_pptx_v2.py`。
+- XLSX：用 `xlsx_translate.py`（只改共享字符串 + 表名，格式/图表/图片零风险；注意 Excel 表名上限 31 字符）。
 - 下面的 Step 1–7 是完整参考；**日常按 TL;DR 三步即可**。
 
 ## Step 1: Extract document to keyed JSON
@@ -315,6 +316,7 @@ baoyu-document-translator-v2/
 │   ├── engine_select.py              # environment-adaptive engine decision (Step 6)
 │   ├── write_docx_v2.py              # legacy run.text write-back (Step 6 fallback)
 │   ├── write_pptx_v2.py              # keyed JSON → PPTX (includes table cells)
+│   ├── xlsx_translate.py             # XLSX: shared strings + sheet names only (format-safe)
 │   ├── localize_cjk_en.py            # CJK→EN layout: fonts/numbering/tracking/justify/fields
 │   ├── paginate_plan.py              # pagination pre-pass + bounded --repair (Step 6)
 │   ├── toc_pages.py                  # rewrite TOC page numbers from rendered PDF (Step 7)
