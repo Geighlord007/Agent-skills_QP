@@ -16,70 +16,24 @@ For business-critical or template-heavy DOCX files, v2 can delegate reading and 
 - Documents you are creating from scratch (use `docx` skill Create path instead)
 - Files that fail WIR validation due to malformed OOXML (fix the file first)
 
-## Bridge script idea
+## Bridge script (implemented, v2.1.2)
 
-`scripts/wir_bridge_v2.py` (not yet implemented; implement when first WIR-path document is processed):
+`scripts/write_docx_wir.py` applies translated parts via `TextEdit` old→new
+replacements per story. Resolve the engine location with `scripts/engine_select.py`
+(sibling skill dir / `~/.agents/skills/docx/scripts` / `$DSH_SKILLS_DIR/docx/scripts` /
+`/root/agent-skills/skills/docx/scripts`) — never hardcode machine-specific paths.
 
-```python
-import sys
-import json
-from pathlib import Path
+**Platform reality**: the engine ships only `_core.cpython-312-x86_64-linux-gnu.so`,
+so it imports only on matching Linux + CPython 3.12 x86_64. On Windows/macOS
+`engine_select.py` reports `{"recommended": "surgical"}` and you must use
+`scripts/write_docx_surgical.py` (the verified, platform-independent equivalent).
+On a Linux host, run `engine_select.py`; if `engine_importable=true`, prefer WIR for
+comment/tracked-change/nested-table-heavy documents and keep the v2 gates around it
+(`verify_structure.py` + `render_qa.py` are engine-agnostic).
 
-sys.path.insert(0, '/home/adam18294/agent-skills/skills/docx/scripts')
-from engine import WIRSession, TextEdit
-
-
-def extract_to_json(docx_path, out_json):
-    session = WIRSession.open(docx_path)
-    elements = []
-
-    parts = ['document']
-    # Discover headers/footers/footnotes/endnotes by reading document first
-    w1, wir, _ = session.read(part='document')
-    # Parse WIR XML to find rel IDs, then add header:rIdX etc.
-    # ...implementation...
-
-    for part in parts:
-        cursor = None
-        while True:
-            w, wir, cursor = session.read(part=part, cursor=cursor)
-            if not wir:
-                break
-            # Parse <p> and <tbl> blocks, assign keys, store in elements
-            # ...implementation...
-
-    session.close()
-    Path(out_json).write_text(
-        json.dumps({'file_type': 'docx', 'elements': elements}, ensure_ascii=False, indent=2),
-        encoding='utf-8'
-    )
-
-
-def write_from_json(docx_path, translated_json, output_path):
-    session = WIRSession.open(docx_path)
-    data = json.loads(Path(translated_json).read_text(encoding='utf-8'))
-
-    # Build TextEdit list keyed by (part, element_key)
-    edits = []
-    for elem in data['elements']:
-        # Map elem key back to WIR old_string
-        # TextEdit(old_string='<r>original</r>', new_string='<r>translated</r>')
-        # ...implementation...
-        pass
-
-    # Apply edits story by story
-    # session.edit(w1, edits)
-
-    session.save(output_path)
-
-
-if __name__ == '__main__':
-    cmd = sys.argv[1]
-    if cmd == 'extract':
-        extract_to_json(sys.argv[2], sys.argv[3])
-    elif cmd == 'write':
-        write_from_json(sys.argv[2], sys.argv[3], sys.argv[4])
-```
+If the wrapper hits an API mismatch on the target machine it prints the engine's
+`TextEdit` signature and exits 3 — adapt the wrapper to the printed signature there
+and commit the fix back.
 
 ## Mapping strategy
 
