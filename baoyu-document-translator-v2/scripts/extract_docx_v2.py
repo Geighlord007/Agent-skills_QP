@@ -63,13 +63,61 @@ def get_hyperlinks(para, doc):
     return links
 
 
+def para_runs(para):
+    """Direct w:r children plus runs inside w:ins and w:hyperlink (document order).
+    Field control/result runs inside hyperlinks (PAGEREF etc.) are excluded so page
+    numbers are never overwritten; their w:tab runs are kept."""
+    from docx.text.run import Run
+    out = []
+    state = {"mode": None}  # shared across direct runs, w:ins and w:hyperlink children
+    def consider(r):
+        fc = r.find(qn("w:fldChar"))
+        ftype = fc.get(qn("w:fldCharType")) if fc is not None else None
+        has_t = r.find(qn("w:t")) is not None
+        has_instr = r.find(qn("w:instrText")) is not None
+        if ftype == "begin":
+            if has_t:
+                out.append(Run(r, para))  # fused WPS run: cached result translatable
+            state["mode"] = "inside"
+            return
+        if ftype == "separate":
+            state["mode"] = "result"
+            return
+        if ftype == "end":
+            state["mode"] = None
+            return
+        if has_instr:
+            return
+        if state["mode"] in ("inside", "result"):
+            # field RESULT runs: exclude only purely-numeric generated results
+            # (SEQ/PAGEREF/PAGE); static content inside field results (TOC entry
+            # titles, cached dates, alphanumeric codes) is translatable
+            txt = "".join(t.text or "" for t in r.findall(qn("w:t")))
+            if re.fullmatch(r"[\d\.\,\;\:\s\/\-\%]*", txt):
+                return
+        out.append(Run(r, para))
+    def collect(runs_container):
+        for r in runs_container:
+            if r.tag.split("}")[-1] == "r":
+                consider(r)
+    for child in para._p:
+        tag = child.tag.split("}")[-1]
+        if tag == "r":
+            collect([child])
+        elif tag == "ins":
+            collect(list(child))
+        elif tag == "hyperlink":
+            collect(list(child))
+    return out
+
+
 def extract_paragraph(para, key_prefix, story, index, doc=None):
     """Extract a paragraph element; returns dict or None if empty."""
     text = para.text.strip()
     if not text:
         return None
 
-    runs = [r for r in para.runs]
+    runs = para_runs(para)
     parts = [r.text for r in runs]
 
     elem = {
@@ -79,7 +127,7 @@ def extract_paragraph(para, key_prefix, story, index, doc=None):
         "index": index,
         "style": para.style.name if para.style else "Normal",
         "runs": len(runs),
-        "text": para.text,
+        "text": "".join(parts),
         "parts": parts,
     }
 
@@ -100,17 +148,35 @@ def extract_paragraph(para, key_prefix, story, index, doc=None):
 
 
 def extract_table(table, key_prefix, story, table_index):
-    """Yield table_cell elements."""
+    """Yield table_cell elements (one per PHYSICAL cell: vMerge continuations and
+    horizontal gridSpan duplicates are skipped so two keys never share one w:tc)."""
+    seen = set()
     for ri, row in enumerate(table.rows):
         for ci, cell in enumerate(row.cells):
             if not is_physical_cell(cell):
                 continue
+            tc = cell._tc
+            if tc in seen:      # hold references: id() of temporary lxml proxies is reused
+                continue
+            seen.add(tc)
 
             cell_text = cell.text.strip()
             if not cell_text:
                 continue
 
-            all_runs = [r for para in cell.paragraphs for r in para.runs]
+            all_runs = [r for para in cell.paragraphs for r in para_runs(para)]
+            parts = [r.text for r in all_runs]
+            # paragraph boundaries inside the cell (cumulative run counts) so merge can
+            # keep multi-paragraph cells' line breaks aligned; `text` joins paragraph
+            # texts with \n so translators see the paragraph structure
+            para_splits = []
+            para_texts = []
+            acc = 0
+            for para in cell.paragraphs:
+                pruns = para_runs(para)
+                acc += len(pruns)
+                para_splits.append(acc)
+                para_texts.append("".join(r.text for r in pruns))
             yield {
                 "key": f"{key_prefix}{table_index}_r{ri}_c{ci}",
                 "type": "table_cell",
@@ -119,8 +185,9 @@ def extract_table(table, key_prefix, story, table_index):
                 "row": ri,
                 "col": ci,
                 "runs": len(all_runs),
-                "text": cell.text,
-                "parts": [r.text for r in all_runs],
+                "text": "\n".join(para_texts),
+                "parts": parts,
+                "para_splits": para_splits,
             }
 
 
@@ -207,7 +274,7 @@ def extract_footnotes_endnotes(docx_path):
                         "type": "paragraph",
                         "story": story,
                         "index": para_index,
-                        "runs": len(runs),
+                        "runs": len(texts),
                         "text": full_text,
                         "parts": texts,
                     })
@@ -256,25 +323,97 @@ def extract_docx(docx_path, out_path=None):
         "p_body_", "t_body_", "body", doc
     ))
 
-    # Headers and footers
+    # Headers and footers (default + first-page + even-page variants)
     for si, section in enumerate(doc.sections):
-        header = section.header
-        if header is not None:
-            story = f"header:{si}"
+        for attr, suffix in (("header", ""), ("first_page_header", "first"),
+                             ("even_page_header", "even")):
+            part = getattr(section, attr, None)
+            if part is None or part.is_linked_to_previous:
+                continue
+            story = f"header{suffix}:{si}"
             stories.append(story)
             elements.extend(extract_story_elements(
-                get_container_element(header), header.paragraphs, header.tables,
-                f"p_header_{si}_", f"t_header_{si}_", story, doc
+                get_container_element(part), part.paragraphs, part.tables,
+                f"p_header{suffix}_{si}_", f"t_header{suffix}_{si}_", story, doc
+            ))
+        for attr, suffix in (("footer", ""), ("first_page_footer", "first"),
+                             ("even_page_footer", "even")):
+            part = getattr(section, attr, None)
+            if part is None or part.is_linked_to_previous:
+                continue
+            story = f"footer{suffix}:{si}"
+            stories.append(story)
+            elements.extend(extract_story_elements(
+                get_container_element(part), part.paragraphs, part.tables,
+                f"p_footer{suffix}_{si}_", f"t_footer{suffix}_{si}_", story, doc
             ))
 
-        footer = section.footer
-        if footer is not None:
-            story = f"footer:{si}"
-            stories.append(story)
-            elements.extend(extract_story_elements(
-                get_container_element(footer), footer.paragraphs, footer.tables,
-                f"p_footer_{si}_", f"t_footer_{si}_", story, doc
-            ))
+    # Text boxes / shapes in body (w:txbxContent)
+    from docx.text.paragraph import Paragraph
+    body_elem = get_container_element(doc.element.body)
+    for n, tb in enumerate(body_elem.findall(".//" + qn("w:txbxContent"))):
+        pi = 0
+        for p in tb.findall(qn("w:p")):
+            para = Paragraph(p, doc)
+            elem = extract_paragraph(para, f"txbx_{n}_p", "textbox", pi, doc)
+            if elem:
+                elements.append(elem)
+                pi += 1
+        # tables nested inside text boxes (pict/shape > textbox > txbxContent > tbl)
+        for ti, tbl in enumerate(tb.findall(qn("w:tbl"))):
+            for ri, tr_el in enumerate(tbl.findall(qn("w:tr"))):
+                seen_tc, ci = set(), 0
+                for tc in tr_el.findall(qn("w:tc")):
+                    if id(tc) in seen_tc:
+                        continue
+                    seen_tc.add(id(tc))
+                    parts = []
+                    for p in tc.findall(".//" + qn("w:p")):
+                        parts.extend(r.text for r in para_runs(Paragraph(p, doc)))
+                    if "".join(parts).strip():
+                        elements.append({
+                            "key": f"t_txbx_{n}_{ti}_r{ri}_c{ci}",
+                            "type": "table_cell",
+                            "story": "textbox",
+                            "table": f"txbx_{n}_{ti}",
+                            "row": ri,
+                            "col": ci,
+                            "runs": len(parts),
+                            "text": "".join(parts),
+                            "parts": parts,
+                        })
+                    ci += 1
+
+    # text boxes inside header/footer parts (running-head branding, page-number frames)
+    from docx.text.paragraph import Paragraph as _P
+    for si, section in enumerate(doc.sections):
+        for attr, scope in (("header", "h"), ("footer", "f"),
+                            ("first_page_header", "hfirst"), ("first_page_footer", "ffirst")):
+            part = getattr(section, attr, None)
+            if part is None or part.is_linked_to_previous:
+                continue
+            for n, tb in enumerate(part._element.findall(".//" + qn("w:txbxContent"))):
+                pi = 0
+                for p in tb.findall(qn("w:p")):
+                    para = _P(p, part)
+                    elem = extract_paragraph(para, f"txbx_{scope}{si}_{n}_p", "textbox", pi, doc)
+                    if elem:
+                        elements.append(elem)
+                        pi += 1
+
+    # paragraphs inside SDT content controls (body level)
+    seen_sdt = set()
+    for idx, sdt in enumerate(body_elem.findall(".//" + qn("w:sdt"))):
+        if id(sdt) in seen_sdt:
+            continue
+        seen_sdt.add(id(sdt))
+        pi = 0
+        for p in sdt.findall(".//" + qn("w:p")):
+            para = Paragraph(p, doc)
+            elem = extract_paragraph(para, f"p_sdt_{idx}_p", "sdt", pi, doc)
+            if elem:
+                elements.append(elem)
+                pi += 1
 
     # Footnotes and endnotes
     fn_elements = extract_footnotes_endnotes(docx_path)

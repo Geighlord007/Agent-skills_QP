@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 
 
-MARKER_RE = re.compile(r"<!--\s*key:([^|]+)\|runs:(\d+)(?:\|type:([^\s>]+))?\s*-->")
+MARKER_RE = re.compile(r"<!--\s*key:([^|]+)\|runs:(\d+)(?:\|type:([^\s>]+))?\|?\s*-->")
 
 
 def parse_markdown(md_text):
