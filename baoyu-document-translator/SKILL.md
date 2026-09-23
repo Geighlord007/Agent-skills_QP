@@ -1,6 +1,6 @@
 ---
 name: baoyu-document-translator
-description: Translate documents (DOCX, PPTX) while preserving original formatting, styles, and structure. Uses baoyu-translate's refined workflow for high-quality translation + run-level precision for format preservation. Use when user wants to translate a Word document, PowerPoint, or any formatted document without losing layout, fonts, colors, tables, or merged cells.
+description: "DEPRECATED (2026-09-23, superseded by baoyu-document-translator-v2 — do not use for new work): Translate documents (DOCX, PPTX) while preserving original formatting, styles, and structure. Uses baoyu-translate's refined workflow for high-quality translation + run-level precision for format preservation. Use when user wants to translate a Word document, PowerPoint, or any formatted document without losing layout, fonts, colors, tables, or merged cells."
 version: 1.0.0
 metadata:
   openclaw:
@@ -14,6 +14,21 @@ metadata:
 ---
 
 # Document Translator
+
+> ## ⚠️ DEPRECATED — 2026-09-23
+>
+> **This skill is superseded by `baoyu-document-translator-v2`. Do not use it for new work.**
+> Kept for reference and upstream comparison only; removal is planned
+> (see `../DEPRECATIONS.md` for the date, checklist and recovery commands).
+>
+> **Why**: v1 writes text back through `python-docx` (`run.text = ...`), which silently drops
+> fields (`w:fldChar`/`w:instrText`), page breaks, tabs/`w:ptab`, anchored drawings and
+> `w:pict`, and it covers merged cells / first-page+even-page headers / text boxes / content
+> controls only partially. v2 keeps the OOXML structure intact (surgical `w:t`-level writer,
+> or the WIR engine on Linux/WSL2), adds a QA pack (structure gate, rendered QA, CJK→EN layout
+> localization, pagination pre-pass, 23-check selftest) and XLSX support.
+>
+> **Recover this directory from git anytime**: `git checkout <commit>^ -- baoyu-document-translator`
 
 Translate DOCX and PPTX files using **baoyu-translate's refined workflow** while preserving all original formatting.
 
