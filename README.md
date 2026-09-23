@@ -73,7 +73,6 @@ cd ~/.agents/skills && git pull   # 日常更新
 ├── README.md
 ├── .gitignore
 ├── agent-reach/               ← 技能(每个含 SKILL.md)
-├── baoyu-document-translator/        ← DEPRECATED（2026-09-23，改用 v2；见 DEPRECATIONS.md）
 ├── baoyu-document-translator-v2/
 ├── baoyu-translate/
 ├── bio-research/

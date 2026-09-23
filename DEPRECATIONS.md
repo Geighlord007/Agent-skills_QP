@@ -18,9 +18,9 @@
 
 ## 登记表
 
-| 技能 | 标记日期 | 替代者 | 状态 | 计划删除 |
+| 技能 | 标记日期 | 替代者 | 状态 | 实际删除 |
 |---|---|---|---|---|
-| `baoyu-document-translator` (v1, 1.0.0) | 2026-09-23 | `baoyu-document-translator-v2` (v2.2.2) | 已标记，缓冲中 | 下一次仓库清理时 |
+| `baoyu-document-translator` (v1, 1.0.0) | 2026-09-23 | `baoyu-document-translator-v2` (v2.2.2) | **已删除** | 2026-09-23（当日，所有者决定） |
 
 ### 条目：`baoyu-document-translator` (v1)
 
@@ -44,12 +44,22 @@
   - 根 `README.md` 的目录树——1 处
 - **没有任何脚本、流程或其它技能调用 v1 的脚本。**
 
-**删除时的检查清单**（供第三步执行）
+**删除时的检查清单**（已于 2026-09-23 全部执行）
 
-- [ ] `git rm -r baoyu-document-translator`
-- [ ] 更新根 `README.md` 目录树里那一行
-- [ ] 提交信息写明：`remove deprecated baoyu-document-translator (v1, see DEPRECATIONS.md)`
-- [ ] 删除后按下方命令验证仍可取回
+- [x] `git rm -r baoyu-document-translator`
+- [x] 更新根 `README.md` 目录树里那一行（已移除）
+- [x] 提交信息写明：`remove deprecated baoyu-document-translator (v1, see DEPRECATIONS.md)`
+- [x] 删除后按下方命令验证仍可取回
+
+**删除记录**
+
+- **实际删除日期**：2026-09-23（与标记同日，**缓冲期 0 天**）
+- **为什么没有缓冲**：仓库所有者当天决定立即删除；依赖核查（见上）已确认无任何调用方，因此风险可接受。
+  这是对 `DEPRECATIONS.md` 默认流程（标记 → 缓冲 → 删除）的一次有意偏离，记录在此以便回看时不误判。
+- **删除内容**：11 个文件 / 43.4 KB（`SKILL.md`、`references/schema.md`、`scripts/` 下 9 个脚本）
+- **删除提交**：`remove deprecated baoyu-document-translator (v1, see DEPRECATIONS.md)`；
+  用 `git log --diff-filter=D --name-only -- baoyu-document-translator` 可定位（不写死哈希，避免后续改动失效）
+- **删除后的影响**：无。v2 的文档里仍有 7 处提到 v1，那些是**历史说明**（"v2 是 v1 的优化分支"等），不是调用。
 
 **如何取回（删除之后）**
 
