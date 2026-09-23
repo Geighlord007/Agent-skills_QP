@@ -27,5 +27,8 @@ desktop.ini
 .env
 .env.local
 
-# Third-party tools cloned locally, not versioned here
-tools/
+# Third-party tools cloned locally at the repo ROOT, not versioned here.
+# Anchored with a leading slash on purpose: an unanchored "tools/" also swallowed the
+# tools/ directories INSIDE skills (e.g. cosmetic-research/tools, nice-baogao/tools),
+# which silently kept real skill code out of the repository.
+/tools/
