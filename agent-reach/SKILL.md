@@ -143,9 +143,7 @@ https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
 
 ---
 
-> ## 📌 本机环境备注（2026-09-17 更新，优先以此为准）
->
-> 配套脚本在本 skill 目录的 `scripts/` 下（雪球讨论区、小红书用户搜索）。
+> ## 📌 本机环境备注（2026-09-23 更新，优先以此为准）
 >
 > **本机已验证可用的后端**：Bilibili（bili CLI）、微博（mcporter→mcp-server-weibo，手动注册）、
 > 抖音（mcporter→douyin-mcp-server，手动注册）、雪球（Cookie + API）、Twitter（twitter CLI + 代理）、
@@ -160,12 +158,16 @@ https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
 > - **Reddit**：本机直连和代理访问 .json / old.reddit 均 403（数据中心 IP 被封），匿名接口已死；
 >   备用方案：等 OpenCLI 扩展连上后用 `opencli reddit`，或用 WebSearch/聚合页间接核实。
 > - **小红书 xiaohongshu-mcp**：服务不在时先启动：`cd ~/.agent-reach/tools/xiaohongshu-mcp && nohup ./xiaohongshu-mcp > /tmp/xhs-mcp.log 2>&1 &`
->   启动时不能带代理变量。用 v2.4.3，v2.5.0 在本机段错误。无用户搜索工具，搜用户用 `scripts/xhs_search_user.py`。
+>   启动时不能带代理变量。用 v2.4.3，v2.5.0 在本机段错误。无用户搜索工具，搜用户改用 `opencli xiaohongshu user USER_ID -f yaml`。
 >   **冷启动坑**：服务刚重启后直接 `search_feeds` 会 60s 超时 panic（搜索页风控加载慢）；
 >   先调一次 `list_feeds` 或 `check_login_status` 预热浏览器，之后搜索即正常。
 >   批量调用建议 sleep 2-3s，mcporter 侧超时设 `MCPORTER_CALL_TIMEOUT=180000`。
-> - **雪球**：行情 API 带 Cookie 直连即可；个股讨论区有 WAF，用 `scripts/xueqiu_stock_comments.py`。
-> - **微信公众号**：`python3 本skill目录/scripts/wechat_read.py <文章URL>`（Camoufox 过 TCaptcha）。
+> - **雪球**：桌面 Chrome 已登录时优先 `opencli xueqiu`（命令见 references/finance.md）；行情 API 带 Cookie 直连亦可，讨论区有 WAF。
+> - **微信公众号**（2026-09-23 实测）：curl **直连**即可读正文，不要走代理（境外代理 IP 反而触发风控）：
+>   `curl -s -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36" "文章URL"`
+>   UA 是浏览器递给网站的"名片"，curl 默认名片是 curl/x.x 易被拦，`-A` 换成浏览器名片即可。
+>   验证码墙（"环境异常"/poc_token）是**条件触发**（IP 性质、频率、UA），不是必触发；低频+住宅 IP+浏览器 UA 基本不触发。
+>   万一撞墙：降频、隔段时间再试。旧结论"curl 过不去"是当时走了代理所致，已作废。
 > - **Cookie 过期**：B站/雪球重新登录 Chrome 后 `agent-reach configure --from-browser chrome --platform <平台>`；
 >   Twitter/小红书用 Cookie-Editor 导出后更新对应配置（小红书改完要重启服务）。
 > - **2026-09-17 工具刷新**：opencli 1.8.6→1.8.7、mcporter 0.9.0、yt-dlp 已 force 重装、bili 0.6.2、twitter-cli 0.8.6。
