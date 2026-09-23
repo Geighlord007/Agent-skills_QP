@@ -1,9 +1,35 @@
-# baoyu-document-translator v2.1
+# baoyu-document-translator v2.2.2
 
-Optimized fork of `baoyu-document-translator` for format-preserving DOCX/PPTX
-translation. v2.1 is a production-hardened revision: surgical w:t-level write-back,
-structure-aware merge, all-story extraction, CJK→EN localization, blocking gates,
-rendered QA, pagination pre-pass, and a regression selftest.
+Format-preserving **DOCX / PPTX / XLSX** translation — a production-hardened revision of
+`baoyu-document-translator` (v1, **removed 2026-09-23** — see `../DEPRECATIONS.md`).
+Includes surgical `w:t`-level write-back (or the WIR engine on Linux/WSL2), structure-aware
+merge, all-story extraction, CJK→EN localization, blocking gates, rendered QA, pagination
+pre-pass and a regression selftest.
+
+## Scope & sibling dependencies
+
+```
+baoyu-translate   (upstream skill: the translation workflow itself — three modes, glossary)
+        ▲
+        │ called by both translators
+        │
+baoyu-document-translator-v2   ← THIS SKILL
+   owns: extraction → chunking → merge → write-back → QA (optional pack)
+        │
+        │ borrows, only on Linux / WSL2 (native Windows cannot load the compiled engine)
+        ▼
+docx skill  →  WIR engine (`docx/scripts/engine`, Linux .so)      [optional dependency]
+```
+
+| Sibling skill | Role | Status |
+|---|---|---|
+| `baoyu-translate` | the actual translation workflow (quick / normal / refined, glossary) | **required** — v2 calls it |
+| `docx` | supplies the WIR write-back engine | **optional** — Linux/WSL2 first choice; native Windows falls back to v2's surgical writer |
+| `baoyu-document-translator` (v1) | old `python-docx` route (`run.text = ...` drops fields/page breaks) | **removed 2026-09-23**; recoverable from git history |
+| `baoyu-document-translator-v2` | this skill | active |
+
+Runtime engine choice: `python scripts/engine_select.py`.
+XLSX needs no engine: `scripts/xlsx_translate.py` rewrites only shared strings + sheet names.
 
 ## Quick start (DOCX, supported path)
 
@@ -45,7 +71,7 @@ python scripts/extract_pptx_v2.py input.pptx extracted.json
 python scripts/write_pptx_v2.py input.pptx output.pptx translated.json
 ```
 
-## Key improvements (v2.1 over v1)
+## Key improvements (v2.2 over v1)
 
 1. **Keyed markdown markers** — mapping by stable key, not paragraph order.
 2. **All stories extracted** — headers/footers (default+first+even), footnotes, endnotes,
@@ -58,14 +84,21 @@ python scripts/write_pptx_v2.py input.pptx output.pptx translated.json
 6. **Blocking gates + rendered QA + selftest** — no silent shipping of broken docs.
 7. **PPTX table cells** fully written back.
 8. **EXTEND.md passthrough** for baoyu-translate preferences.
+9. **XLSX translation** — `scripts/xlsx_translate.py` rewrites only `xl/sharedStrings.xml`
+   text and sheet names, so styles, number formats, charts, images and formulas survive.
+10. **Environment-adaptive write-back** — `engine_select.py` picks WIR (Linux/WSL2) or
+    surgical (native Windows/macOS). A third-party option for tracked-changes delivery is
+    evaluated in `references/safe-docx-evaluation.md`.
 
 ## Files
 
 - `SKILL.md` — full workflow, pitfalls cross-refs, troubleshooting
-- `scripts/` — extraction / merge / write / localize / paginate / gate / QA / selftest
+- `GUIDE.md` — one-page guide (3 steps, engine choice, file inventory, known limits)
+- `scripts/` — extraction / merge / write / localize / paginate / gate / QA / XLSX / selftest
 - `references/schema-v2.md` — keyed JSON schema
 - `references/cjk-en-localization-pitfalls.md` — CJK→EN checklist (read for CJK jobs)
 - `references/subagent-prompt-template.md` — parallel-chunk translation contract
 - `references/optimization-notes.md` — v1 issues and v2 fixes
-- `references/wir-integration.md` — experimental WIR engine notes (non-Windows only)
+- `references/wir-integration.md` — WIR engine integration (Linux/WSL2; see `scripts/engine_select.py`)
+- `references/safe-docx-evaluation.md` — third-party tracked-changes A/B + hybrid write-back plan
 - `CHANGELOG.md` — version history
