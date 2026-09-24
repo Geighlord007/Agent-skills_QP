@@ -1,0 +1,9 @@
+{
+  "apiKey": "",
+  "baseUrl": "https://api.exa.ai",
+  "defaultNumResults": 6,
+  "defaultType": "auto",
+  "mimoApiKey": "",
+  "mimoBaseUrl": "https://api.xiaomimimo.com",
+  "mimoModel": "mimo-v2.6-flash"
+}
