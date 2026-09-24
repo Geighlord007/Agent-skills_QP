@@ -26,6 +26,9 @@ desktop.ini
 # Local config
 .env
 .env.local
+config.json
+*.key
+*.pem
 
 # Third-party tools cloned locally at the repo ROOT, not versioned here.
 # Anchored with a leading slash on purpose: an unanchored "tools/" also swallowed the
