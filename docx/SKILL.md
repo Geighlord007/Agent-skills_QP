@@ -17,6 +17,8 @@ If the .docx is merely a content/data source (e.g., reference papers, raw data e
 
 `.doc` format → convert first: `libreoffice --headless --convert-to docx`
 
+**编辑路线的平台二选一**:WIR 内核是编译扩展(`engine/_core…linux-gnu.so`),仅 Linux/WSL2 可载;原生 Windows / macOS 或扩展导入失败时,同一编辑域用 **`scripts/engine_surgical/`**(纯 Python 外科手术内核,key→parts 寻址写回,只动 `<w:t>` 节点)。两者 open/save 同形但 edit 语义不同(见该包 docstring);baoyu-document-translator-v2 的写回即调用本包,勿再复制。
+
 **2. md2docx** (`references/md2docx-reference.md`) — When you are the Orchestrator (you have `create_subagent` and dispatch `task`) and your sub-agents have returned `.md` files. Convert their output to a formatted Word document using the md2docx pipeline.
 
 If you do NOT have `create_subagent` / `task` tools, you are not an Orchestrator and md2docx does not apply. Do not write markdown yourself and convert with pandoc — the result is mediocre. Use Create (C#) for high-quality output.
@@ -43,7 +45,8 @@ docx/
 │   └── matplotlib-guide.md        → Charts Word can't do natively
 ├── scripts/
 │   ├── docx                       → Unified entry point (the only script to call)
-│   ├── engine/                    → WIR engine (editing core)
+│   ├── engine/                    → WIR engine (editing core, Linux/WSL2 only)
+│   ├── engine_surgical/           → Surgical editing core (pure Python, all platforms)
 │   ├── md2docx/                   → Citation → Word pipeline
 │   ├── generate_backgrounds.py    → Style reference: Morandi curves (read for technique, don't call directly)
 │   ├── generate_inkwash_backgrounds.py  → Style reference: ink wash
