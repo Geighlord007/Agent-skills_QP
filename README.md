@@ -82,6 +82,7 @@ cd ~/.agents/skills && git pull   # 日常更新
 ├── docx/
 ├── exhibition-notes/
 ├── find-skills/
+├── jev-browser/                ← jev-ultrafast 网页自动化引擎手册 + 混合接管协议 + 查价子域配方
 ├── literature-search/
 ├── paddleocr-doc-parsing/
 ├── pubmed-database/
