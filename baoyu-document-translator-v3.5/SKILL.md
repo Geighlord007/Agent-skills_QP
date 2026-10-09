@@ -1,7 +1,7 @@
 ---
-name: baoyu-document-translator-v2
+name: baoyu-document-translator-v3.5
 description: Translate DOCX and PPTX while preserving formatting. Two write-back engines chosen by environment — WIR (compiled engine, Linux/WSL2 first choice) and surgical (pure Python, native Windows/macOS) — plus keyed round-trip, all-story extraction (headers/footers/footnotes/textboxes/tracked insertions), structure-aware merge, and an optional QA pack (structure gate, rendered QA, CJK layout localization, pagination pre-pass, regression selftest).
-version: 3.0.0
+version: 3.5.0
 metadata:
   openclaw:
     homepage: https://github.com/JimLiu/baoyu-skills#baoyu-document-translator-v2
@@ -18,7 +18,7 @@ metadata:
         - Pillow
 ---
 
-# Document Translator v2
+# Document Translator v3.5
 
 把 DOCX / PPTX 翻译成目标语言，**格式不变**。
 
@@ -67,7 +67,7 @@ python scripts/engine_select.py     # 打印 {"recommended": "wir" | "surgical"}
 | `localize_cjk_en.py` | 中→英版式本地化：字体、编号、字距、版式调整、域开关 |
 | `paginate_plan.py` / `toc_pages.py` | 分页预 pass / 目录页码回写 |
 | `reconcile_consistency.py` | 目录 ↔ 标题 ↔ 图注一致性核对 |
-| `selftest.py` | 脚本自身回归测试（23 项） |
+| `selftest.py` | 脚本自身回归测试（24 项） |
 | `references/safe-docx-evaluation.md` | **留痕交付（可选）**：第三方 Safe Docx 的实测数据与组合写回方案 |
 
 ## 能力范围（v1 → 现在）
@@ -105,15 +105,18 @@ PPTX 走形状树遍历（含组合形状子级、表格单元格、备注），
 Element keys are stable across extraction runs:
 - `p_body_0`, `p_body_1`, ...
 - `t_body_0_r0_c0`, ...
-- `p_header1_0`, `p_footer1_0`, ...
+- `p_header_0_0` / `p_headerfirst_0_0` / `p_headereven_0_0`（页脚同理 `p_footer...`；键名中间段是
+  story 后缀与 section 序号）
 - `fn_0_p0`, `en_0_p0`, ...
-- `shape_body_0_p0`
+- `txbx_0_p0`（文本框）, `p_sdt_0_p0`（SDT）
 
 ### PPTX keys
 
 - Shape: `s_0_3`（slide 0, shape 3；组合形状子级追加路径段，如 `s_11_17_1`）
-- Table cell: `t_0_5_r1_c2`（含路径段时同理追加）
-- Note: `n_0_p0` (slide 0 note paragraph 0)
+- Table cell: `t_0_5_1_2`（slide 0、形状路径 5、行 1、列 2；含路径段时同理追加）
+- Note: `n_0_0`（slide 0 的备注第 0 段）
+
+键名规则：`t_{slide}_{形状路径}_{行}_{列}`、`n_{slide}_{段号}`。
 
 备注页默认提取，`--no-notes` 关闭。
 
@@ -169,17 +172,40 @@ This lets the merge step map translations back by key rather than by paragraph o
 
 Run baoyu-translate refined mode on `source.md`, 或用 `chunk_keyed.py` 分块 + 并行子代理。共享上下文（`02-prompt.md`）必须引用 `01-context.md` 的术语表、缩写释义、语域与数字写法，**禁止只给译者孤立文本块**。区块文本之外附页面语境（该页主题、栏目含义）。
 
-Each chunk subagent reads `02-prompt.md`, translates its chunk to `chunks/chunk-NN-draft.md`. 译者只输出完整自然的句子；**run 数量与格式边界不对译者暴露**，run 切分在合并后由主代理处理（见 Step 4）。
+**全部区块一次派发**，禁止分批（分批会让后批的审校跟着串行等待）。每个翻译子代理
+按 `references/subagent-prompt-template.md` Part 2 执行：每个文件只读一遍，只做语义自查，
+机械核对（标记完整性、行数结构、数字词元、违禁字）不查，统一交 `qa_v3.py` 阻断把关。
+译者只输出完整自然的句子；run 数量与格式边界不对译者暴露。
 
 Important instruction to add to the translation prompt:
 
 > Preserve every `<!--key:...|runs:N-->` marker exactly as-is. Do not delete, renumber, or move them. Place each marker immediately before the translated text block it belongs to. 译文以完整自然的目标语言句子为先，禁止为对上 run 数量而扭曲语序或截断词组。
 
-### 3.3 独立审校（并行子代理）
+### 3.3 独立审校 + 修订 + run 切分（并行子代理，流水线触发）
 
-每个区块译完后交给**未参与该块翻译**的子代理审校，对照 `01-context.md` 与源块检查：语域贴合页面语境、缩写按全文判定处理、术语与规格单一致、数值与书写形式合规、表达无翻译腔、多分段元素的行数与空行结构和源文本一致。审校发现写入 `chunks/chunk-NN-review.md`，主代理据此修订。
+每个区块译完后**立即**交给未参与该块翻译的子代理审校——某块译完就派那块的审校，
+不等整波翻译结束（后台派发，审校与后续翻译重叠进行）。
+按 `references/subagent-prompt-template.md` Part 3 执行，工具回合上限 8 次。
+审校只查语义与表达（语域贴合、缩写处理、保留英文清单、术语一致、数值改动、翻译腔与语义偏移），
+机械项不查。
 
-### 3.4 跨区块统一
+审校子代理直接产出两份文件，主代理不再逐条修订：
+- `chunks/chunk-NN-draft.md` — 发现问题直接改好覆盖（无问题不动）；
+- `chunks/chunk-NN-splits.json` — 本块多 run 元素的精确 run 切分（强调短语对位、
+  换行不跨段、数值词元完整、拼接与译文一致）。
+
+主代理把各块 splits 合并成 `run_splits.json`，合并各块 draft 成 `translation.md`。
+
+### 3.4 逐页抽查（并行子代理，与写回重叠）
+
+全部审校完成后生成 `pages/page-NN.txt`（`page_compare.py`），按页分 3–4 路并行派发抽查
+（模板 Part 4，工具回合上限 6 次）。抽查是第二双眼睛，**直接修入所属 chunk 草稿**并同步
+该块切分，主代理只汇总。
+
+抽查与 Step 4–6 的合并、写回**同时进行**（合并写回只需 30 秒，抽查约 1.5 分钟）；
+若抽查改动了译文，重新合并 + 写回 + 跑一次 qa_v3 即可，改动通常只涉及少量元素。
+
+### 3.5 跨区块统一
 
 主代理合并各区块后做全篇用词统一：同一概念在所有区块使用同一译法；同一缩写的展开形式一致；数字书写形式全篇一致。然后写出 `translation.md`。
 
@@ -199,10 +225,11 @@ python scripts/merge_v3.py extracted.json translation.md translated.json [run_sp
 3. Warns if any key is missing or any run count cannot be matched
 4. Preserves original `text` field for reference
 
-### Run splitting strategy（合并之后处理）
+### Run splitting strategy（审校阶段产出，合并时一步生效）
 
-合并脚本按语言边界自动切分只是初稿。对 `runs > 1` 且含强调（粗体/斜体/颜色）或换行（`a:br`）的元素，
-主代理按以下原则做**精确切分**，写入 `run_splits.json` 随合并一步生效：
+合并脚本按语言边界自动切分只是初稿。对 `runs > 1` 且含强调（粗体/斜体/颜色）或换行（`a:br`）
+的元素，精确切分由审校子代理在审校阶段按上述规则产出（`chunks/chunk-NN-splits.json`），
+主代理汇总成 `run_splits.json` 随合并一步生效。切分规则：
 
 1. 强调 run 承载对应的强调短语（源文本加粗/斜体/彩色的词组，译文中用相应措辞自然突出）
 2. 换行位置与原文一致（`a:br` 在 run 之间，切分点必须让断行出现在同样的语义位置）
@@ -253,6 +280,8 @@ Legacy fallback（仅当 v3 写回器不可用时）：`write_docx_surgical.py` 
 python scripts/qa_v3.py source output translated.json translation.md [--numerals whitelist.json] [--render out.pdf]
 ```
 
+### 7a. 阻断检查（结构 / 文本 / 数字 / 拼接）
+
 一次跑完全部阻断检查，任何一项不过即 exit 1、不得交付：
 
 1. **结构与文本**：
@@ -292,13 +321,14 @@ pdftoppm -jpeg -r 150 output.pdf page
 ## Directory structure
 
 ```
-baoyu-document-translator-v2/
+baoyu-document-translator-v3.5/
 ├── SKILL.md                          # This file
 ├── scripts/
 │   ├── extract_v3.py                 # 合一提取器：DOCX + PPTX（v3 主入口）
 │   ├── merge_v3.py                   # 合并 + run 切分一步完成（v3 主入口）
 │   ├── write_v3.py                   # 合一写回器：DOCX WIR/surgical 分发 + PPTX 嵌套 key（v3 主入口）
 │   ├── qa_v3.py                      # 单一 QA 入口：结构/文本/格式/数字（v3 主入口）
+│   ├── page_compare.py               # 逐页中英对照视图（供并行逐页抽查）
 │   ├── extract_docx_v2.py            # DOCX 提取内核（extract_v3 调用；独立可用）
 │   ├── json_to_markdown_v2.py        # keyed JSON → keyed markdown (Step 2)
 │   ├── chunk_keyed.py                # marker-safe chunk splitter (Step 3)
@@ -326,12 +356,13 @@ baoyu-document-translator-v2/
 │   ├── wir-integration.md            # How to use docx skill WIR engine
 │   ├── optimization-notes.md         # v1 → v2 rationale and upstream issues
 │   ├── cjk-en-localization-pitfalls.md  # CJK→EN localization checklist (v2.1)
-│   └── subagent-prompt-template.md   # parallel-chunk prompt template (v2.3：翻译+审校双角色)
+│   └── subagent-prompt-template.md   # parallel-chunk prompt template (v2.5：翻译+审校+逐页抽查)
 
 工作产物（任务目录内，按生成顺序）：
 01-context.md（全文理解，含缩写推断依据）→ 翻译规格单（用户确认）→ 02-prompt.md（共享上下文）
-→ chunks/chunk-NN-draft.md（并行翻译）→ chunks/chunk-NN-review.md（独立审校）
-→ translation.md + run_splits.json（精确 run 切分）→ translated.json（merge_v3 一步产出，无中间件）
+→ chunks/chunk-NN-draft.md（并行翻译）→ chunks/chunk-NN-splits.json（审校 + 修订 + 精确切分，直出）
+→ pages/page-NN.txt（逐页抽查，直改草稿，与写回重叠）
+→ translation.md + run_splits.json（主代理汇总）→ translated.json（merge_v3 一步产出，无中间件）
 ```
 
 ## Dependencies
@@ -363,7 +394,7 @@ v2 does not replace the `docx` skill. The relationship:
 | `parts length != runs` | Agent merged runs or deleted marker | Re-translate with explicit marker-preservation instructions |
 | 译文语域错位（设施页译成团队口吻） | 译者只拿到孤立文本块，缺页面语境 | Step 3.0 全文理解 + 3.2 每区块附页面语境；禁止只投喂文本块 |
 | 缩写误译（BU 留白或错判） | 缩写处置被固化在模板里，未按全文推断 | Step 3.0 缩写清单须给出语境推断与依据；判定不了的进待确认清单交用户 |
-| 区块间同一概念用词不一（同类最优/同类最佳） | 各区块独立翻译缺共享术语表 | Step 3.0 术语表 + 3.4 跨区块统一 |
+| 区块间同一概念用词不一（同类最优/同类最佳） | 各区块独立翻译缺共享术语表 | Step 3.0 术语表 + 3.5 跨区块统一 |
 | 译文翻译腔（语序迁就数字位置） | 译者为保数字位置扭曲句子 | 译者只输出自然句子；run 切分后置（Step 4），数值 run 完整保留数字词元 |
 | 标题被切成不相干的词（Core / Expertise） | 多分段元素逐段孤立翻译 | 译者按整块理解后重排行文；审校子代理专查此项（Step 3.3） |
 | 数字书写形式与全篇冲突（800 万美元 vs $8.0M） | 数字写法未按全文统一 | Step 3.0 数字写法倾向 + 7a 数字保真核对与白名单 |
