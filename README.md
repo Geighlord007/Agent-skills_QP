@@ -73,6 +73,7 @@ cd ~/.agents/skills && git pull   # 日常更新
 ├── README.md
 ├── .gitignore
 ├── agent-reach/               ← 技能(每个含 SKILL.md)
+├── baoyu-document-translator-v3.6/
 ├── baoyu-document-translator-v4/
 ├── baoyu-translate/
 ├── bio-research/
