@@ -1,4 +1,4 @@
-# baoyu-document-translator v3.6
+# baoyu-document-translator v4
 
 Format-preserving **DOCX / PPTX / XLSX** translation — a production-hardened revision of
 `baoyu-document-translator` (v1, **removed 2026-09-23** — see `../DEPRECATIONS.md`).
@@ -13,7 +13,7 @@ baoyu-translate   (upstream skill: the translation workflow itself — three mod
         ▲
         │ called by both translators
         │
-baoyu-document-translator-v3.6   ← THIS SKILL
+baoyu-document-translator-v4   ← THIS SKILL
    owns: extraction → chunking → merge → write-back → QA (optional pack)
         │
         │ borrows, only on Linux / WSL2 (native Windows cannot load the compiled engine)
@@ -23,10 +23,10 @@ docx skill  →  WIR engine (`docx/scripts/engine`, Linux .so)      [optional de
 
 | Sibling skill | Role | Status |
 |---|---|---|
-| `baoyu-translate` | the actual translation workflow (quick / normal / refined, glossary) | **required** — v3.6 calls it |
-| `docx` | supplies the WIR write-back engine | **optional** — Linux/WSL2 first choice; native Windows falls back to v3.6's surgical writer |
+| `baoyu-translate` | the actual translation workflow (quick / normal / refined, glossary) | **required** — v4 calls it |
+| `docx` | supplies the WIR write-back engine | **optional** — Linux/WSL2 first choice; native Windows falls back to v4's surgical writer |
 | `baoyu-document-translator` (v1) | old `python-docx` route (`run.text = ...` drops fields/page breaks) | **removed 2026-09-23**; recoverable from git history |
-| `baoyu-document-translator-v3.6` | this skill | active |
+| `baoyu-document-translator-v4` | this skill | active |
 
 Runtime engine choice: `python scripts/engine_select.py`.
 XLSX needs no engine: `scripts/xlsx_translate.py` rewrites only shared strings + sheet names.

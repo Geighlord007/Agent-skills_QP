@@ -1,9 +1,9 @@
-# Subagent Prompt Template (v2.5)
+# Subagent Prompt Template (v3)
 
-翻译、审校、逐页抽查三个角色，均为并行子代理。共享上下文文件为 `02-prompt.md`，其内容必须引用
-`01-context.md`（全文理解产物）与规格单（用户确认的翻译规格）；两者缺一不可，禁止只投喂孤立文本块。
+两套角色：V4 PPTX 流程的角色（Part 5–7，任务书由 `build_dispatch.py` 生成，内容随任务书下发）
+与 DOCX 分块流程的角色（Part 1–4，共享上下文 `02-prompt.md`）。两套都遵守同一份效率纪律。
 
-**效率纪律（v2.5，三个角色都必须遵守）**：
+**效率纪律（三个角色都必须遵守）**：
 - 每个文件只读一遍。读完立即开始产出，禁止为"核对"反复重读同一文件；核对交给脚本。
 - **工具回合上限**：翻译 ≤ 4 次（三次读取 + 一次写入）、审校 ≤ 8 次、逐页抽查 ≤ 6 次。
   超出上限前必须完成产出；回合数决定墙钟时间，禁止用工具调用代替思考。
@@ -100,3 +100,39 @@ Review target: `chunks/chunk-{i:02d}-draft.md`，对照 `chunks/chunk-{i:02d}-so
 
 主代理汇总 splits 文件成 `run_splits.json`（key 去重合并），汇总各块 draft 成 `translation.md`，
 做跨区块用词统一后进入合并。
+
+## Part 5 — V4 翻译子代理（整页视觉）
+
+任务书：`build_dispatch.py translate` 生成的 `groups/dispatch-tr-NN.md`（含规格、源块、
+run 元信息、图内文字登记、页面图绝对路径）。
+
+- 回合纪律：第一回合并行读任务书与全部页面图，第二回合写 `groups/draft-NN.md`，上限 2 回合。
+- 页面图只作语境：图内文字不回写，翻译范围只有标记块；译文在图上当场取舍措辞与长度。
+- 草稿文件必须是新文件：主代理派发前清空旧 `draft-NN.md`（Write 工具对已存在文件要求先 Read，
+  白白多花一个回合）。
+- 回复只报块数与存疑项，禁止复述译文。
+
+## Part 6 — V4 审校子代理（补丁直出）
+
+任务书：`groups/dispatch-rv-NN.md`（含规格、源块、译文块、run 元信息），未参与该组翻译。
+产出 `groups/patches-NN.json`（严格 JSON）：
+
+```
+{"patches": [{"key": "…", "text": "整块修订后译文"}], "splits": {"key": ["part1", "part2"]}, "notes": ["…"]}
+```
+
+splits 只写 runs>1 的元素：强调 run 承载对应强调短语译文；换行不跨段；数值词元完整落单 part；
+parts 拼接与修订后译文逐字一致（仅空白差异）；单 run 元素不写。**补丁改动了多 run 元素时，
+必须在同一个补丁文件里给出该 key 的新 splits**，旧切分不会自动跟随文本。没有问题写
+`{"patches": [], "splits": {}, "notes": []}`。工具回合上限 2。回复只报修订条数与争议点。
+
+## Part 7 — V4 视觉核对子代理
+
+任务书：`groups/dispatch-vs-NN.md`（含译文块、源块、终稿页面图绝对路径）。
+第一回合并行读任务书与页面图，第二回合写 `groups/issues-NN.json`（严格 JSON）：
+
+```
+{"issues": [{"page": N, "key": "…或 null", "kind": "漏译|误译|溢出|重叠|截断|数字", "detail": "…"}]}
+```
+
+图内文字保留源语言属于既定政策，不算问题。工具回合上限 2。回复只报检查页号与问题条数。

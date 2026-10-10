@@ -1,10 +1,15 @@
 # 脚本清单
 
 ```
-baoyu-document-translator-v3.6/
+baoyu-document-translator-v4/
 ├── SKILL.md                          # 流程骨架
 ├── scripts/
 │   ├── extract_v3.py                 # 合一提取器：DOCX + PPTX（v3 主入口）
+│   ├── render_slides.py              # PPTX 逐页导出 JPG（PowerPoint COM）
+│   ├── ocr_slides.py                 # 图内文字登记（AI Studio OCR，保留带位置 JSONL）
+│   ├── slide_bundles.py              # 按页分组构建翻译单元
+│   ├── build_dispatch.py             # 子代理任务书生成（translate/review/visual）
+│   ├── apply_patches.py              # 补丁落稿 + run_splits.json + translation.md
 │   ├── merge_v3.py                   # 合并 + run 切分一步完成（v3 主入口）
 │   ├── write_v3.py                   # 合一写回器：DOCX WIR/surgical 分发 + PPTX 嵌套 key（v3 主入口）
 │   ├── qa_v3.py                      # 单一 QA 入口：结构/文本/格式/数字（v3 主入口）

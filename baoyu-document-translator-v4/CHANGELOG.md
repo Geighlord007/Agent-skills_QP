@@ -13,6 +13,19 @@
 | Terminology/style | Not wired to baoyu-translate preferences | 全文理解产物 `01-context.md` + 用户确认的翻译规格单 + EXTEND.md 设置三者合并使用 |
 | 翻译质量 | 译者各自决定语域与缩写处置 | 全文理解 → 规格确认 → 并行翻译（带页面语境）→ 独立审校 → 跨区块统一 |
 
+## 4.0.0 (2026-10-10) — PPTX 整页视觉流水线
+
+### Added
+- `render_slides.py`（PowerPoint COM 逐页导出 JPG）、`ocr_slides.py`（AI Studio 图内文字登记，
+  保留带位置原始 JSONL）、`slide_bundles.py`（按页分组翻译单元）、`build_dispatch.py`
+  （子代理任务书生成，内容随任务书下发）、`apply_patches.py`（补丁落稿 + 切分失效回退自动切分）。
+- PPTX 流程改为整页视觉翻译：译者随任务书读入页面图，翻译与长度取舍当场完成；
+  独立审校补丁直出；终稿重新渲染做视觉核对。DOCX 保持分块流程不变。
+
+### Changed
+- SKILL.md 4.0.0；`subagent-prompt-template.md` v3（新增 Part 5–7 角色、补丁 JSON 格式、
+  回合上限 2）。
+
 ## 3.6.0 (2026-10-09) — 文档分层
 
 ### Changed
