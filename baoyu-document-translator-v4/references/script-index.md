@@ -8,7 +8,8 @@ baoyu-document-translator-v4/
 │   ├── render_slides.py              # PPTX 逐页导出 JPG（PowerPoint COM）
 │   ├── ocr_slides.py                 # 图内文字登记（AI Studio OCR，保留带位置 JSONL）
 │   ├── slide_bundles.py              # 按页分组构建翻译单元
-│   ├── build_dispatch.py             # 子代理任务书生成（translate/review/visual）
+│   ├── build_dispatch.py             # 任务书生成（translate/review/visual/unify）
+│   ├── api_call.py                   # 任务书 → MiMo 接口 → 产出文件（四角色）
 │   ├── apply_patches.py              # 补丁落稿 + run_splits.json + translation.md
 │   ├── merge_v3.py                   # 合并 + run 切分一步完成（v3 主入口）
 │   ├── write_v3.py                   # 合一写回器：DOCX WIR/surgical 分发 + PPTX 嵌套 key（v3 主入口）

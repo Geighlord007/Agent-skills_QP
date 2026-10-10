@@ -13,9 +13,11 @@ TRANSLATE_RULES = """# 翻译任务书（组 {gi}，页 {pages}）
 3. 下方规格（术语表、缩写释义、数字写法、保留英文清单、语域）逐条遵守；同一概念全篇同一译法。
 4. 数值不得改动；书写形式按规格处理（如 million/billion 换算为 万/亿），转换后的写法直接写进译文。
 5. 空源块：保留标记行，正文留空。表格单元格按片段翻译，保留内部换行。
-6. 标记为 `em_runs` 的 run 承载源文强调短语，译文用相应措辞自然突出；`para_splits` 决定换行归属，行不跨段。
-7. 页面图只作语境参考：图内文字（含 OCR 登记）不回写，翻译范围只有标记块。
-8. 产出写入 {draft}（UTF-8）。回复只报块数与存疑项，禁止复述译文。
+6. 译文是纯文本：禁止 markdown 强调符号与转义符（**、*、__、_、`、>），强调含义由措辞承载。
+7. 标记为 `em_runs` 的 run 承载源文强调短语，译文用相应措辞自然突出；`para_splits` 决定换行归属，行不跨段。
+8. 页面图只作语境参考：图内文字（含 OCR 登记）不回写，翻译范围只有标记块。
+9. 产出文件只含标记块本身，开头与结尾禁止附带任何报告、统计、说明文字。
+10. 产出文件：{draft}（UTF-8；经接口调用时由脚本写入同名文件，直接回复正文即可）。
 
 """
 
@@ -29,8 +31,10 @@ REVIEW_RULES = """# 审校任务书（组 {gi}，页 {pages}）
 产出写入 {patches}（严格 JSON，不要 markdown 外壳）：
 {{"patches": [{{"key": "…", "text": "整块修订后译文"}}], "splits": {{"key": ["part1", "part2"]}}, "notes": ["…"]}}
 
-splits 只写 runs>1 的元素，规则：强调 run（em_runs）承载对应强调短语译文；换行不跨段；
-数值词元完整落在单个 part；parts 拼接与修订后译文逐字一致（仅空白差异）；单 run 元素不写。
+splits 只写含强调（`em_runs` 非空）或分段（`para_splits` 非空）的多 run 元素，规则：
+强调 run 承载对应强调短语译文；换行不跨段；数值词元完整落在单个 part；
+parts 拼接与修订后译文逐字一致（仅空白差异）；数组长度必须等于该元素的 runs 数量。
+补丁改动了多 run 元素时必须在同一个补丁文件里给出该 key 的新 splits。
 没有问题就写 {{"patches": [], "splits": {{}}, "notes": []}}。回复只报修订条数与争议点。
 
 """
@@ -43,6 +47,21 @@ VISUAL_RULES = """# 终稿视觉核对（组 {gi}，页 {pages}）
 产出写入 {issues}（严格 JSON）：
 {{"issues": [{{"page": N, "key": "…或 null", "kind": "漏译|误译|溢出|重叠|截断|数字", "detail": "…"}}]}}
 没有问题就写 {{"issues": []}}。回复只报检查页号与问题条数。
+
+"""
+
+
+UNIFY_RULES = """# 跨组统一任务书
+
+通读各组译文块，做全篇用词统一：同一概念同一译法；缩写展开形式一致；数字书写形式一致；
+保留英文清单全篇一致。只输出需要修改的条目。
+
+产出（严格 JSON，不要 markdown 外壳）：
+{{"patches": [{{"key": "…", "text": "整块统一后的译文"}}], "splits": {{"key": ["part1", "part2"]}}, "notes": ["…"]}}
+
+补丁改动了多 run 元素时必须在同一个文件里给出该 key 的新 splits（强调 run 承载强调短语译文、
+换行不跨段、数值词元完整落单 part、parts 拼接与统一后译文逐字一致、数组长度等于 runs 数量）。
+没有需要统一的写 {{"patches": [], "splits": {{}}, "notes": []}}。
 
 """
 
@@ -60,7 +79,7 @@ def ocr_for_page(ocr_dir, page):
 
 def main():
     ap = argparse.ArgumentParser(description="组装子代理任务书（内容随任务书下发，子代理零查找）")
-    ap.add_argument("role", choices=["translate", "review", "visual"])
+    ap.add_argument("role", choices=["translate", "review", "visual", "unify"])
     ap.add_argument("groups_dir")
     ap.add_argument("--context", required=True, help="01-context.md（规格）")
     ap.add_argument("--ocr-dir", default="", help="页面 OCR 目录（可选）")
@@ -75,6 +94,19 @@ def main():
         if not index:
             sys.exit(f"没有组 {args.group}")
     context = read(args.context).strip()
+
+    if args.role == "unify":
+        drafts = []
+        for df in sorted(gdir.glob("draft-*.md")):
+            drafts.append(f"## {df.name}\n" + read(df).strip())
+        if not drafts:
+            sys.exit("没有草稿可统一")
+        out = gdir / "dispatch-unify.md"
+        out.write_text(UNIFY_RULES + "## 规格（全文理解产物）\n" + context
+                       + "\n\n" + "\n\n".join(drafts) + "\n", encoding="utf-8")
+        print(f"[build_dispatch] {out.name}: {out.stat().st_size} 字节")
+        return
+
     prefix = {"translate": "dispatch-tr", "review": "dispatch-rv", "visual": "dispatch-vs"}[args.role]
 
     for item in index:

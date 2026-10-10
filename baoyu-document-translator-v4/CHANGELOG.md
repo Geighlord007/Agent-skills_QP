@@ -13,6 +13,19 @@
 | Terminology/style | Not wired to baoyu-translate preferences | 全文理解产物 `01-context.md` + 用户确认的翻译规格单 + EXTEND.md 设置三者合并使用 |
 | 翻译质量 | 译者各自决定语域与缩写处置 | 全文理解 → 规格确认 → 并行翻译（带页面语境）→ 独立审校 → 跨区块统一 |
 
+## 4.1.0 (2026-10-10) — 模型接口直调
+
+### Added
+- `api_call.py`：任务书 → MiMo 接口（`~/.agents/keys/mimo.key`，默认 `mimo-v2.6-pro`，支持图像）
+  → 产出文件。翻译 / 审校 / 统一 / 视觉核对四角色全部接口化，带网络重试、输出清洗
+  （工具调用片段、markdown 强调符、汇报文字）。token 计费只剩载荷与产出。
+
+### Changed
+- `build_dispatch.py`：新增 unify 角色任务书；翻译规则禁 markdown 强调符与汇报文字；
+  审校切分限定为含强调或分段的多 run 元素且数组长度等于 runs 数量。
+- `apply_patches.py`：切分数量与 run 数量不符同样回退自动切分；Windows 控制台 UTF-8 输出。
+- SKILL.md 4.1.0：接口路线为标准执行方式，子代理路线保留为替代。
+
 ## 4.0.0 (2026-10-10) — PPTX 整页视觉流水线
 
 ### Added

@@ -1,8 +1,12 @@
 import argparse
+import io
 import json
 import re
 import sys
 from pathlib import Path
+
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 MARKER_RE = re.compile(r"^<!--key:([^|]+)\|runs:(\d+)-->$")
 
@@ -71,14 +75,20 @@ def main():
 
     # 补丁改动过文本的元素，其旧切分可能失效：非空白内容不一致的切分回退合并脚本的自动切分
     final_text = {}
+    runs_map = {}
     for blocks in docs.values():
         for marker, body in blocks:
-            key = MARKER_RE.match(marker.strip()).group(1)
-            final_text[key] = "\n".join(body)
+            m = MARKER_RE.match(marker.strip())
+            final_text[m.group(1)] = "\n".join(body)
+            runs_map[m.group(1)] = int(m.group(2))
     for key in list(all_splits):
         joined = "".join(all_splits[key])
         if "".join(joined.split()) != "".join(final_text.get(key, "").split()):
             print(f"[apply_patches] 警告: {key} 的切分与补丁后的译文不一致，回退自动切分")
+            del all_splits[key]
+        elif len(all_splits[key]) != runs_map.get(key):
+            print(f"[apply_patches] 警告: {key} 的切分数量 {len(all_splits[key])} 与 run 数量 "
+                  f"{runs_map.get(key)} 不一致，回退自动切分")
             del all_splits[key]
 
     Path(args.run_splits).write_text(

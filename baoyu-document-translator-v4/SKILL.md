@@ -1,7 +1,7 @@
 ---
 name: baoyu-document-translator-v4
 description: Translate DOCX / PPTX documents into the target language while preserving formatting (runs, fields, shapes, tables, headers/footers, footnotes, speaker notes). Use whenever the user asks to translate, localize, 中文化 or 英文化 a .docx or .pptx file — reports, pitch decks, papers, manuals — or any document translation where page layout must not change. PPTX uses slide-image-guided translation (each slide translated with its rendered page in view) plus OCR registration of image-baked text; DOCX uses keyed chunk translation. Parallel sub-agents, independent review, blocking QA gate. XLSX translation via scripts/xlsx_translate.py (shared strings + sheet names only).
-version: 4.0.0
+version: 4.1.0
 metadata:
   openclaw:
     homepage: https://github.com/JimLiu/baoyu-skills#baoyu-document-translator-v2
@@ -32,7 +32,8 @@ python scripts/render_slides.py input.pptx slides               #    逐页导�
 python scripts/ocr_slides.py slides                             #    图内文字登记（保留带位置原始 JSONL）
 python scripts/slide_bundles.py extracted.json --out groups     #    按页分组构建翻译单元
 python scripts/build_dispatch.py translate groups --context 01-context.md --ocr-dir slides/ocr --images slides
-#    …… 全文理解 → 规格确认 → 并行翻译（看图）→ 独立审校（补丁）→ 跨组统一 ……
+python scripts/api_call.py translate groups --images slides      # 并行调 MiMo 接口产出草稿（看图）
+#    …… 全文理解 → 规格确认 → api_call review（补丁）→ api_call unify（统一）……
 python scripts/apply_patches.py groups                          # 2. 补丁落稿 + run_splits.json + translation.md
 python scripts/merge_v3.py extracted.json translation.md translated.json [run_splits.json]
 python scripts/write_v3.py input output translated.json         # 3. 写回
@@ -87,21 +88,29 @@ python scripts/slide_bundles.py extracted.json --out groups --per-group 3
 python scripts/build_dispatch.py translate groups --context 01-context.md --ocr-dir slides/ocr --images slides
 ```
 
-每组一个翻译子代理：第一个回合并行读入任务书与本组页面图，第二个回合写出
-`groups/draft-NN.md`（整块译文；页面效果在图上当场取舍措辞与长度）。全部组一次派发，
-工具回合上限 2。
+每组一个翻译请求：`api_call.py translate` 把任务书与本组页面图发给模型接口（默认
+`mimo-v2.6-pro`，密钥 `~/.agents/keys/mimo.key`），并行产出 `groups/draft-NN.md`
+（整块译文；页面效果在图上当场取舍措辞与长度）。全部组一次并发。子代理执行方式见
+`references/subagent-prompt-template.md` Part 5（无接口密钥时的替代路线）。
 
-每组译完**立即**派独立审校（未参与该组翻译）：
+每组译完**立即**审校（未参与该组翻译）：
 
 ```bash
 python scripts/build_dispatch.py review groups --group NN --context 01-context.md
+python scripts/api_call.py review groups --group NN
 ```
 
-审校产出 `groups/patches-NN.json`（修订补丁 + run 切分 + 备注），工具回合上限 2；
+审校产出 `groups/patches-NN.json`（修订补丁 + run 切分 + 备注）；
 只查语义与表达，机械核对统一交 `qa_v3.py`。
 
-跨组统一：全部审校完成后派一个子代理通读各草稿，产出统一补丁（同一概念同一译法、
-缩写展开一致、数字书写一致；改动多 run 元素时同步给出新切分）。然后：
+跨组统一：
+
+```bash
+python scripts/build_dispatch.py unify groups --context 01-context.md
+python scripts/api_call.py unify groups
+```
+
+统一补丁改动多 run 元素时须同步给出新切分。然后：
 
 ```bash
 python scripts/apply_patches.py groups     # 补丁落稿 + run_splits.json + translation.md
@@ -135,9 +144,10 @@ python scripts/qa_v3.py input output translated.json translation.md [--numerals 
 ```bash
 python scripts/render_slides.py output out_slides
 python scripts/build_dispatch.py visual groups --context 01-context.md --images out_slides
+python scripts/api_call.py visual groups --images out_slides
 ```
 
-每组一个核对子代理（第一个回合并行读任务书与终稿页面图，第二个回合写 `groups/issues-NN.json`）：
+每组一次视觉核对请求（模型看终稿页面图返回 `groups/issues-NN.json`）：
 查漏译、误译、溢出、重叠、截断、数字错误；图内文字保留源语言属于既定政策，不算问题。
 发现问题修补后重跑 Step 4–5。交付前必做渲染 QA（转 PDF 查空白页等）见 `references/qa-pack.md` 7b。
 
