@@ -51,3 +51,10 @@ and commit the fix back.
 ## Validation
 
 After WIR save, run `docx/scripts/docx validate` if available, or open the document in Word/LibreOffice to check for errors.
+
+## 与 `docx` skill 的关系
+
+本 skill 不替代 `docx` skill：
+
+- 本 skill 负责翻译流程、键控 JSON schema 与 surgical 写回（其支持的高保真路线）。
+- `docx` skill 只在 WIR 路线（非 Windows 主机）需要。

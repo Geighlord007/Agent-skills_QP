@@ -1,4 +1,44 @@
-# CHANGELOG — baoyu-document-translator-v2
+# CHANGELOG — baoyu-document-translator
+
+## 能力范围（v1 → 现在）
+
+| Area | v1 | 现在 |
+|------|-----|-----|
+| Mapping | Plain markdown split by `\n\n` (fragile when translator merges/splits paragraphs) | Keyed markdown: each element carries a stable `key` so reassembly is order-independent |
+| DOCX scope | Body paragraphs + table cells only | All stories: headers/footers (default+first+even), footnotes, endnotes, text boxes, tracked insertions; merged cells deduped to one key per physical `w:tc` |
+| Write-back | `run.text =` (destroys page breaks, tabs, fields, drawings) | w:t-level only（surgical 或 WIR）; field-run guard; fused WPS field runs handled |
+| PPTX scope | Shape text frames only; table cells extracted but not written back | Shape text frames + table cells fully round-tripped |
+| CJK→EN layout | Not addressed | `localize_cjk_en.py` (fonts/numbering/tracking/justify/field switches) + `paginate_plan.py` |
+| QA | Text-level only | 可选质检包：structure gate + rendered QA (blanks/CJK/TOC/montage) + regression selftest |
+| Terminology/style | Not wired to baoyu-translate preferences | 全文理解产物 `01-context.md` + 用户确认的翻译规格单 + EXTEND.md 设置三者合并使用 |
+| 翻译质量 | 译者各自决定语域与缩写处置 | 全文理解 → 规格确认 → 并行翻译（带页面语境）→ 独立审校 → 跨区块统一 |
+
+## 3.6.0 (2026-10-09) — 文档分层
+
+### Changed
+- SKILL.md 重写为流程骨架：触发式 description、每步只保留命令与阻断点、参考文件地图。
+- 明细按格式与职能移入 references/：`docx.md`、`pptx.md`、`translation-workflow.md`、`qa-pack.md`、`script-index.md`。
+- 能力范围对照表移入本文件。
+
+## 3.5.0 (2026-10-09) — 子代理效率纪律 + 逐页抽查
+
+### Added
+- `scripts/page_compare.py`：逐页中英对照视图（供逐页抽查）。
+- `references/subagent-prompt-template.md` v2.5：翻译 / 审校 / 逐页抽查三角色，工具回合上限 4 / 8 / 6，
+  机械核对统一交 `qa_v3.py`。
+
+### Changed
+- 全部区块一次派发；审校流水线触发，直出修订与 run 切分；逐页抽查与合并、写回重叠。
+
+## 3.0.0 (2026-10-09) — v3 合一管线
+
+### Added
+- `extract_v3.py` / `merge_v3.py` / `write_v3.py` / `qa_v3.py`：DOCX + PPTX 合一提取、
+  合并 + run 切分一步完成、写回引擎自动分发、单一阻断 QA 入口（回抽比对、数字保真白名单、
+  parts 拼接一致）。
+
+### Changed
+- 翻译之前必须产出 `01-context.md`（全文理解）与翻译规格单（用户确认）。
 
 ## 2.2.2 (2026-09-22) — XLSX support (shared-string level) + guide update
 
