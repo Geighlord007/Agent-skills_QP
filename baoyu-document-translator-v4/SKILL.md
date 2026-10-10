@@ -1,7 +1,7 @@
 ---
 name: baoyu-document-translator-v4
 description: Translate DOCX / PPTX documents into the target language while preserving formatting (runs, fields, shapes, tables, headers/footers, footnotes, speaker notes). Use whenever the user asks to translate, localize, 中文化 or 英文化 a .docx or .pptx file — reports, pitch decks, papers, manuals — or any document translation where page layout must not change. PPTX uses slide-image-guided translation (each slide translated with its rendered page in view) plus OCR registration of image-baked text; DOCX uses keyed chunk translation. Parallel sub-agents, independent review, blocking QA gate. XLSX translation via scripts/xlsx_translate.py (shared strings + sheet names only).
-version: 4.1.0
+version: 4.2.0
 metadata:
   openclaw:
     homepage: https://github.com/JimLiu/baoyu-skills#baoyu-document-translator-v2

@@ -4,12 +4,15 @@ import sys
 from pathlib import Path
 
 
-def is_emphasis(style):
+def is_emphasis(style, majority_sz=None):
     if not isinstance(style, dict):
         return False
     color = style.get("color")
     colored = color not in (None, "", "000000", "auto")
-    return bool(style.get("b") or style.get("i") or style.get("u") or colored)
+    if style.get("b") or style.get("i") or style.get("u") or colored:
+        return True
+    sz = style.get("sz")
+    return majority_sz is not None and sz is not None and sz != majority_sz
 
 
 def main():
@@ -40,7 +43,9 @@ def main():
             for e in by_page[p]:
                 runs = e.get("runs", 1)
                 styles = e.get("run_styles") or []
-                em = [i for i, s in enumerate(styles) if is_emphasis(s)]
+                szs = [s.get("sz") for s in styles if isinstance(s, dict) and s.get("sz") is not None]
+                majority_sz = max(set(szs), key=szs.count) if szs else None
+                em = [i for i, s in enumerate(styles) if is_emphasis(s, majority_sz)]
                 blocks.append(f"<!--key:{e['key']}|runs:{runs}-->\n{e['text']}")
                 m = {"key": e["key"], "page": p, "runs": runs}
                 if em:

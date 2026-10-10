@@ -13,6 +13,17 @@
 | Terminology/style | Not wired to baoyu-translate preferences | 全文理解产物 `01-context.md` + 用户确认的翻译规格单 + EXTEND.md 设置三者合并使用 |
 | 翻译质量 | 译者各自决定语域与缩写处置 | 全文理解 → 规格确认 → 并行翻译（带页面语境）→ 独立审校 → 跨区块统一 |
 
+## 4.2.0 (2026-10-10) — 切分机制加固
+
+### Changed
+- `merge_keyed_structure_aware.py`：切分守恒兜底（任何路径丢失文本时整段放入首个文本 run
+  并告警）；切分边界不切数值词元（数字串整体留在单个 part）。
+- `slide_bundles.py`：强调判定纳入同元素内字号差异（仅靠字号突出的 run 进 `em_runs`，
+  相应元素进入精确切分范围）。
+
+### Verified
+- selftest 24 项通过；强制全量自动切分（0 个精确切分）走合并 → 写回 → qa_v3 全部通过。
+
 ## 4.1.0 (2026-10-10) — 模型接口直调
 
 ### Added

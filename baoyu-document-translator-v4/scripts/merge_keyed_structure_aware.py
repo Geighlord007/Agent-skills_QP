@@ -48,18 +48,30 @@ def parse_translation(md_text):
     return result
 
 
+NUM_CHARS = "0123456789.,%"
+
+
 def find_boundary(text, pos, radius=40):
     if not text:
         return 0
     pos = max(0, min(pos, len(text)))
-    punct = "\u3002\uff0c\uff1b\uff01\uff1f.,;:!? \t\n"
+    punct = "。，；！？.,;:!? \t\n"
+    found = None
     for j in range(pos, min(pos + radius, len(text))):
         if text[j] in punct:
-            return j + 1
-    for j in range(pos, max(pos - radius, -1), -1):
-        if 0 <= j < len(text) and text[j] in punct:
-            return j + 1
-    return pos
+            found = j + 1
+            break
+    if found is None:
+        for j in range(pos, max(pos - radius, -1), -1):
+            if 0 <= j < len(text) and text[j] in punct:
+                found = j + 1
+                break
+    if found is None:
+        found = pos
+    # 数值词元不跨段：边界落在数字串内部时推进到词元末尾
+    while 0 < found < len(text) and text[found - 1] in NUM_CHARS and text[found] in NUM_CHARS:
+        found += 1
+    return found
 
 
 def distribute(text, src_lens, n):
@@ -199,6 +211,13 @@ def main():
                 new_parts += [""] * (runs - len(new_parts))
             else:
                 new_parts = new_parts[:runs]
+        # 守恒兜底：切分结果必须无损拼回译文；丢失时整段放入首个文本 run
+        if "".join("".join(new_parts).split()) != "".join(trans[k].split()):
+            text_idx = [i for i, p in enumerate(src_parts) if p and p not in DELIMS] or [0]
+            fixed = [""] * len(new_parts)
+            fixed[text_idx[0]] = trans[k]
+            new_parts = fixed
+            warns.append((k, "SPLIT_LOSSY→整段放入首个文本 run"))
         e["parts"] = new_parts
         e["translated_text"] = trans[k]   # keep for QA
         if w:
