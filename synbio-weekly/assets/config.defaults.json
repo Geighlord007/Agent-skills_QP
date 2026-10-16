@@ -1,0 +1,218 @@
+{
+  "_meta": {
+    "name": "合成生物行业周简报",
+    "version": "2.1",
+    "language": "zh-CN + EN 双语（主语言中文，英文成对从属）",
+    "window_days": 10,
+    "window_note": "滚动窗口：每次生成覆盖『今天往前 window_days 天』，配合 data/state.json 去重。10 天兜住新闻稀疏与边缘日期漏报，去重保证不重复。",
+    "search_engine": "exa-search 技能（Exa 引擎；用户指定）",
+    "issue_cron": "每周一 08:00（标准调用见 SKILL.md 末节）"
+  },
+
+  "design": {
+    "standard": "技能包 assets/design-language.md（PAPER-INK EDITORIAL v1.0）",
+    "rules": "全局 border-radius:0；仅 400 字重；强调阶梯=字号>留白>一个语义色>斜体；条目用左强调条盒子；双语堆叠不混排；每图一个结论；来源行强制"
+  },
+
+  "output": {
+    "dir": "briefings",
+    "formats": ["md", "html"],
+    "filename_pattern": "{YYYY-MM-DD}.md / {YYYY-MM-DD}.html",
+    "signal_levels": ["KEY/重点", "WATCH/关注", "BRIEF/简讯"],
+    "language_note": "双语：claim 中文事实句 + 英文 serif italic one-liner；栏目名/KPI/图表标题成对；PROFILE/TECH/TERMS/WHY 中文展开、专名保留英文；HTML 含 ENGLISH ABSTRACT 块。金额统一换算并标口径（VERIFIED/ESTIMATED/UNVERIFIED）"
+  },
+
+  "depth_rules": {
+    "funding_and_deals": "融资/合作条目必须含 PROFILE（公司是谁：成立地/背景/阶段）+ TECH（技术是什么：外行能懂）+ TERMS（金额/轮次/投资方/用途/条款细节）；KEY 档加 WHY。一句话带过即不合格。",
+    "regulatory": "GRAS 表逐条列 物质/申请人/拟议用途/状态/合成生物相关性；主题线（如甜味替代）跨条目串联成 insight",
+    "brief_items": "简讯也至少补一个从句说明公司是干什么的"
+  },
+
+  "image_gen": {
+    "enabled": true,
+    "provider": "volces-ark",
+    "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+    "endpoint": "/images/generations",
+    "model": "doubao-seedream-5-0-pro-260628",
+    "api_key": "",
+    "api_key_note": "密钥写入工作区 config.json 的本字段，或用环境变量 ARK_API_KEY；严禁把密钥写进技能包或推送到 git",
+    "default_size": "1512x648",
+    "style_anchor": "engraved technical illustration, scientific plate style, warm ivory paper ground (#F7F5EB), fine ink hairlines, muted moss-green and clay-terracotta accents, flat restrained editorial composition, no gradients, no shadows, no 3D, no text, no letters, no logos, no watermark",
+    "usage": "每期封面 1 张：node scripts/gen-image.mjs <workspace> \"<本期主题物意象>\"；产出存 <workspace>/briefings/assets/，写完 HTML 后 node scripts/embed-images.mjs <html> 内联。禁生成真人面孔/真实 logo。"
+  },
+
+  "keywords": {
+    "funding_terms": ["Series A", "Series B", "Series C", "seed round", "pre-seed", "raises", "raised", "closed financing", "fund close", "grant", "SBIR", "ARIA grant", "investment", "oversubscribed"],
+    "synbio_terms": ["synthetic biology", "precision fermentation", "biomanufacturing", "cell factory", "engineered microbes", "strain development", "recombinant protein", "alternative protein", "cultivated meat", "cell cultured", "sweet protein", "enzyme preparation", "single cell protein", "bioprocess", "scale-up", "fermentation capacity", "contract development"],
+    "regulatory_terms": ["GRAS", "GRN", "no questions letter", "novel food", "EFSA", "FSA", "regulated product", "IND clearance", "self-affirmed GRAS"],
+    "blacklist": ["crypto", "NFT", "web3", "casino", "giveaway", "airdrop"],
+    "boost_terms": ["GRAS", "FDA", "commercial scale", "tonnes", "liters", "fermenter", "partnership", "exclusive", "IND"],
+    "_note": "关键词定制入口：funding/synbio/regulatory 召回，blacklist 丢弃，boost_terms 触发 KEY 升档；watchlist 命中打 WATCHLIST 标签（棕）"
+  },
+
+  "watchlist_companies": [
+    "Ginkgo Bioworks", "Amyris", "Perfect Day", "The EVERY Company", "Motif FoodWorks",
+    "Solar Foods", "Calysta", "Debut Biotech", "Conagen", "EnginZyme", "Omeat", "Robigo",
+    "Sable Fermentation", "Ferm Labs", "Bestzyme", "GenScript", "MycoTechnology", "Novonesis",
+    "DSM-Firmenich", "dsm-firmenich", "DSM Food Specialties", "IFF", "Codexis", "Twist Bioscience",
+    "Antheia", "Inscripta", "StrainX Bioworks", "baCta", "ÄIO", "Onego Bio", "Vivici",
+    "New Culture", "Change Foods", "Those Vegan Cowboys", "Plantible Foods", "Calyxt",
+    "Evonik", "BASF", "Saku Biosciences", "React Foods", "Tempus"
+  ],
+
+  "sources": [
+    {
+      "id": "synbiobeta",
+      "name": "SynBioBeta",
+      "type": "news+funding",
+      "enabled": true,
+      "urls": [
+        "https://www.synbiobeta.com/synthetic-bio-news",
+        "https://www.synbiobeta.com/categories/capital-markets",
+        "https://www.synbiobeta.com/digest"
+      ],
+      "exa_queries": [
+        "site:synbiobeta.com (funding OR raises OR Series OR grant OR acquisition)",
+        "SynBioBeta digest synthetic biology weekly"
+      ],
+      "note": "行业第一信源；Capital Markets 融资板块更新可能滞后于主新闻流，两条都要看"
+    },
+    {
+      "id": "prwires",
+      "name": "PR Newswire / Business Wire 新闻稿监控",
+      "type": "funding",
+      "enabled": true,
+      "urls": [],
+      "exa_queries": [
+        "PR Newswire (synthetic biology OR precision fermentation OR biomanufacturing OR recombinant protein) (raises OR Series OR funding OR partnership)",
+        "Business Wire (alternative protein OR fermentation OR biotech ingredient) (funding OR partnership OR commercial)"
+      ],
+      "note": "融资稀疏的补位手段：公司发稿常绕过行业媒体"
+    },
+    {
+      "id": "ppti",
+      "name": "Protein Production Technology International (PPTI)",
+      "type": "tech+funding",
+      "enabled": true,
+      "urls": ["https://www.proteinproductiontechnology.com/"],
+      "exa_queries": [
+        "site:proteinproductiontechnology.com (funding OR partnership OR scale-up OR capacity)",
+        "protein production technology sustainable protein commercialization news"
+      ],
+      "note": "用户点名信源；可持续蛋白商业化/放大专刊"
+    },
+    {
+      "id": "bioprocess_media",
+      "name": "生物工艺媒体组（GEN / Fierce Biotech / BioProcess International）",
+      "type": "tech",
+      "enabled": true,
+      "urls": ["https://www.bioprocessintl.com/", "https://www.genengnews.com/"],
+      "exa_queries": [
+        "Genetic Engineering Biotechnology News synthetic biology company funding",
+        "Fierce Biotech synthetic biology biomanufacturing",
+        "BioProcess International fermentation scale-up recombinant"
+      ],
+      "note": "工艺/放大/CDMO 动态，用 synbio_terms 过滤"
+    },
+    {
+      "id": "foodtech_funding",
+      "name": "食品科技资金流（Dealroom / vegconomist / AgFunderNews / Green Queen）",
+      "type": "funding",
+      "enabled": true,
+      "urls": ["https://dealroom.co/news", "https://vegconomist.com/"],
+      "exa_queries": [
+        "Dealroom news (biomanufacturing OR fermentation OR biotech) fundraise",
+        "vegconomist (fermentation OR protein OR ingredient) funding",
+        "AgFunderNews precision fermentation alternative protein",
+        "Green Queen biotech food funding Asia"
+      ],
+      "note": "Dealroom 结构化融资事件库；其余覆盖食品方向"
+    },
+    {
+      "id": "gfi",
+      "name": "GFI / GFI Europe（政策+行业）",
+      "type": "policy",
+      "enabled": true,
+      "urls": ["https://gfi.org/blog/", "https://gfi.org/gfi-in-the-news/", "https://gfieurope.org/blog/"],
+      "exa_queries": [
+        "GFI alternative protein policy regulatory fermentation cultivated meat",
+        "GFI Europe novel food fermentation policy"
+      ],
+      "note": "用户点名信源；政策跟踪+年度数据"
+    },
+    {
+      "id": "deep_analysis",
+      "name": "深度与大额交易（Nature Biotechnology / Endpoints News）",
+      "type": "opinion",
+      "enabled": true,
+      "urls": [],
+      "exa_queries": [
+        "Nature Biotechnology news synthetic biology commercialization",
+        "Endpoints News biomanufacturing deal acquisition"
+      ],
+      "note": "低频高质，宁缺毋滥"
+    }
+  ],
+
+  "regulatory": {
+    "gras": {
+      "enabled": true,
+      "priority": "核心板块",
+      "db_list_url": "https://hfpappexternal.fda.gov/scripts/fdcc/index.cfm?set=GRASNotices&sort=GRN_No&order=DESC&startrow=1&type=column",
+      "db_home_url": "https://hfpappexternal.fda.gov/scripts/fdcc/index.cfm?set=GRASNotices",
+      "detail_url_pattern": "https://hfpappexternal.fda.gov/scripts/fdcc/index.cfm?set=GRASNotices&id={grn}",
+      "recent_letters_url": "https://www.fda.gov/food/gras-notice-inventory/recently-published-gras-notices-and-fda-letters",
+      "excel_download_url": "https://hfpappexternal.fda.gov/scripts/fdcc/cfc/XMLService.cfm?method=downloadxls&set=GRASNotices",
+      "weekly_method": "GRN 号连续递增做周增量：① 抓 db_list_url 前 50 行（GRN_No 降序），与 data/state.json 的 seen_grns 求差集=本期新申报；② 逐条抓 detail_url_pattern 提取 物质/申请人/用途/Basis/状态；③ 抓 recent_letters_url 提取 FDA『no questions』回函，写入 seen_grn_letters；④ 明细页不展示 filing date（2026-09 已验证），如需精确日期下载 excel_download_url 全量表比对",
+      "focus_tags": ["重组酶/表达系统", "甜味蛋白/甜味剂", "菌株/益生菌", "发酵合成色素/营养素", "培养肉原料", "植物提取"],
+      "note": "自 2025-07 起 GRAS 通报同步在 regulations.gov 建 docket 公示；新申报高度集中在合成生物学来源，每周必报"
+    },
+    "fda_other": {
+      "enabled": true,
+      "items": {
+        "FCN 食品接触通报": "https://hfpappexternal.fda.gov/scripts/fdcc/index.cfm?set=FCN（set=FCN 已确认）",
+        "NDI 新膳食成分通告": "https://www.fda.gov/food/dietary-supplement-products-ingredients/ndi-75-day-notifications（站内检索每周新增）"
+      },
+      "method": "复用 GRAS 的『编号增量差集法』"
+    },
+    "eu_uk": {
+      "enabled": true,
+      "items": {
+        "EFSA novel food": "https://www.efsa.europa.eu/en/topics/topic/novel-food",
+        "英国 FSA 受监管产品": "https://www.food.gov.uk/business-guidance/regulated-products"
+      },
+      "method": "exa 每周检索：EFSA novel food opinion (fermentation OR cultured OR protein) + FSA regulated products approval；发酵蛋白/培养肉/合成生物来源优先",
+      "filter": "只报与合成生物/发酵/培养肉相关的条目"
+    },
+    "apac": {
+      "enabled": false,
+      "items": {
+        "新加坡 SFA 新型食品": "https://www.sfa.gov.sg/food-information/food-types/novel-food",
+        "Health Canada 新型食品": "https://www.canada.ca/en/health-canada/services/food-nutrition/food-safety/food-additives/novel-foods.html"
+      },
+      "method": "exa 检索；默认关闭，需要时 enabled 改 true"
+    }
+  },
+
+  "sections_order": [
+    "报头（kicker/标题/双语副题/一句话结论）+ 封面图 + ENGLISH ABSTRACT",
+    "本期速览（KPI 带 + 图表速览）",
+    "01 融资动态 / FUNDING & CAPITAL（KEY/WATCH/BRIEF）",
+    "02 公司与商业化 / COMPANY & COMMERCIAL",
+    "03 技术与研发 / TECHNOLOGY & R&D",
+    "04 法规与监管 / REGULATORY（4.1 GRAS 周申报表 / 4.2 FDA 回函 / 4.3 其他法规线 + 来源分布图）",
+    "05 观点与延伸 / VIEWPOINT",
+    "页脚（口径注 + 来源行 + 状态行）"
+  ],
+
+  "quality_rules": [
+    "每条内容必须有原文链接+日期+来源站；无链接不收录",
+    "日期必须落在滚动窗口内（state.json 已刊登过的除外）",
+    "blacklist 命中直接丢弃；boost_terms 或 watchlist 命中升 KEY/WATCHLIST 标签",
+    "同一事件多源报道合并为一条，取信息最全的来源为主链，其余列『另见』",
+    "空栏目保留标题写『本期无』，不虚构不注水",
+    "融资金额统一换算 USD 并标原币种与口径（VERIFIED/ESTIMATED/UNVERIFIED）",
+    "depth_rules 强制：融资/合作条目含 PROFILE/TECH/TERMS，缺一即不合格",
+    "设计合规：遵循 assets/design-language.md——零圆角/无粗体/双语堆叠不混排/每图一个结论/来源行强制"
+  ]
+}
