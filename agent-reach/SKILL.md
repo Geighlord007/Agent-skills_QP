@@ -7,10 +7,10 @@ description: >
 
   Also MUST USE when user mentions any platform or shares any URL/链接:
   小红书/xiaohongshu/xhs, Twitter/推特/X, B站/bilibili, Reddit, Facebook,
-  Instagram, V2EX, LinkedIn/领英/招聘/求职/jobs, YouTube, GitHub code search, 小宇宙播客,
+  Instagram, V2EX, LinkedIn/领英/Boss直聘/招聘/求职/jobs, YouTube, GitHub code search, 小宇宙播客,
   雪球/股票行情, RSS feeds, or any web URL.
 
-  15 platforms, multi-backend routing (OpenCLI / per-platform CLIs / APIs).
+  16 platforms, multi-backend routing (OpenCLI / per-platform CLIs / APIs).
   Zero config for 6 channels. Run `agent-reach doctor --json` to see which
   backend serves each platform right now.
 
@@ -18,21 +18,22 @@ description: >
   发帖/评论/点赞等写操作；已有专门 skill 的平台（先用专门 skill）。
 
   【路由方式】SKILL.md 包含路由表和常用命令，复杂场景需按需阅读对应分类的 references/*.md。
-  分类：search / social (小红书/推特/B站/V2EX/Reddit/Facebook/Instagram) / career(LinkedIn) / dev(github) / web(网页/文章/RSS) / video(YouTube/B站/播客) / finance(雪球/股票)。
+  分类：search / social (小红书/推特/B站/V2EX/Reddit/Facebook/Instagram) / career(LinkedIn/Boss直聘) / dev(github) / web(网页/文章/RSS) / video(YouTube/B站/播客) / finance(雪球/股票)。
 metadata:
   homepage: https://github.com/Panniantong/Agent-Reach
 ---
 
 # Agent Reach — 互联网能力路由器
 
-15 平台、多后端。**本 skill 存在时必须用它访问这些平台，不要自己发明方案。**
+16 平台、多后端。**本 skill 存在时必须用它访问这些平台，不要自己发明方案。**
 
 ## 常驻规则（全程适用）
 
-1. **动手前先体检**：多后端/登录态平台（小红书/Reddit/B站/Twitter/Facebook/Instagram）先跑
+1. **动手前先体检**：多后端/登录态平台（小红书/Reddit/B站/Twitter/Facebook/Instagram/Boss直聘）先跑
    `agent-reach doctor --json`。`active_backend` 有值时按它选命令组；`active_backend: null`
    表示 Doctor 为避免触发浏览器 Cookie 读取或远端写入而没有做实时验证，不代表后端不存在。
-   只有用户任务明确需要该平台时，才按对应 reference 的只读命令手动验证。
+   Doctor 结果是「某一时刻的快照」，通道/登录态可能已变化；执行只读命令前若怀疑失效，
+   按对应 reference 的「体检与恢复」runbook 重新确认（如 career.md 的 Boss直聘 CDP 排查）。
 2. **声明你在用什么**：开始干活前说一句「使用 agent-reach 的 X 平台 / Y 后端」。
 3. **失败按 references 里的重试链处理**，不要瞎猜命令。
 4. **全网调研类任务**：组合多平台（Exa 搜索 + Twitter/Reddit 看讨论 + 小红书/B站看中文场景），并行收集再汇总。
@@ -48,7 +49,7 @@ metadata:
 |---------|------|---------|
 | 网页搜索/代码搜索 | search | [references/search.md](references/search.md) |
 | 小红书/推特/B站/V2EX/Reddit/Facebook/Instagram | social | [references/social.md](references/social.md) |
-| 招聘/职位/LinkedIn | career | [references/career.md](references/career.md) |
+| 招聘/职位/LinkedIn/Boss直聘 | career | [references/career.md](references/career.md) |
 | GitHub/代码 | dev | [references/dev.md](references/dev.md) |
 | 网页/文章/RSS | web | [references/web.md](references/web.md) |
 | YouTube/B站/播客字幕 | video | [references/video.md](references/video.md) |
@@ -86,6 +87,28 @@ Shell。直接运行 `twitter` 前，必须在子进程环境中显式提供
 小红书注意：Agent Reach 不替用户登录，也不读取浏览器 Cookie。OpenCLI 只用
 用户已有且明确控制的 Chrome 会话；没有现成会话时不要自动登录，改用
 Cookie-Editor 手工导出后配置 xiaohongshu-mcp / 存量工具。
+
+Boss直聘配置触发：当用户说“帮我配 Boss直聘”时，先读取 `references/career.md`
+的 Boss 章节，然后在获得安装授权后运行
+`agent-reach install --env=local --system --channels=boss`。Agent 负责按系统启动
+只绑定 `127.0.0.1:9222` 的专用 Chrome；**拉起后第一步是暂停并让用户肉眼确认**
+窗口内是已登录状态（右上角有头像），未登录则让用户登录/扫码，用户确认后再运行
+`boss --cdp-url http://localhost:9222 login --cdp` 和 `agent-reach doctor` 验收。
+不要让用户自己研究端口参数。
+专用 Chrome profile 必须长期复用，不要每次创建，也不要默认改用日常主 Chrome。
+
+判断 CDP 浏览器登录态**不要信 `boss status`**（它只校验本地 session.enc，与
+浏览器登录态互不代表），以 `agent-reach doctor` 的浏览器 cookie 探测（wt2）
+为准，并配合用户肉眼确认。绝不用当前页 URL 判断登录态：
+`security-check` / `zhipin-security` / `_security_check` 安全校验页是 Boss 反爬挑战，
+与登录无关——已登录也会出现（带 CDP 调试端口的 Chrome 几乎必现）。看到它不要
+当成“未登录”，先跑 `agent-reach doctor` 看浏览器 cookie，再决定是否需要用户登录。
+搜索报 `AUTH_EXPIRED` 即浏览器未登录的 ground truth：直接走登录流程 + `login --cdp`，
+不要往安全校验方向解释。
+
+执行搜索时必须使用
+`boss --browser-source existing-browser --cdp-url http://localhost:9222 search ...`；
+遇到 `ENVIRONMENT_RISK` 立即停止，不刷新、不重新登录、不自动重试。
 
 ```bash
 # Twitter 搜索（twitter-cli 首选；失败重试链见 social.md）
@@ -128,7 +151,7 @@ agent-reach doctor --json
 
 - [搜索工具](references/search.md) — Exa AI 搜索
 - [社交媒体](references/social.md) — 小红书, Twitter, B站, V2EX, Reddit, Facebook, Instagram（多后端/登录态命令组）
-- [职场招聘](references/career.md) — LinkedIn
+- [职场招聘](references/career.md) — LinkedIn, Boss直聘
 - [开发工具](references/dev.md) — GitHub CLI
 - [网页阅读](references/web.md) — Jina Reader, RSS
 - [视频播客](references/video.md) — YouTube, B站, 小宇宙
@@ -140,34 +163,3 @@ agent-reach doctor --json
 https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
 
 用户只需提供 cookies，其他配置由 agent 完成。
-
----
-
-> ## 📌 本机环境备注（2026-09-23 更新，优先以此为准）
->
-> **本机已验证可用的后端**：Bilibili（bili CLI）、微博（mcporter→mcp-server-weibo，手动注册）、
-> 抖音（mcporter→douyin-mcp-server，手动注册）、雪球（Cookie + API）、Twitter（twitter CLI + 代理）、
-> 小红书（mcporter→xiaohongshu-mcp 本地服务 v2.4.3）。OpenCLI 1.8.7 已装（npm 全局），Chrome 扩展 v1.0.24 **已连接（2026-09-17）**。
-> 小红书/Reddit 优先走 `opencli xiaohongshu|reddit`：小红书搜索 ~6s 返回、稳定不超时，
-> 明显优于 xiaohongshu-mcp 冷启动；`note` 命令需传带 xsec_token 的完整 URL。
-> Reddit 已在 Chrome 登录（2026-09-17），`opencli reddit search/read` 实测可用；若未来报 403 AUTH_REQUIRED 即登录态过期，请用户重新登录。
->
-> - **网络**：PyPI 走清华镜像 `-i https://pypi.tuna.tsinghua.edu.cn/simple`（pipx 需 `UV_DEFAULT_INDEX`）；
->   GitHub 下载用 curl 或代理。本机代理 `http://127.0.0.1:7890`（Molly），Twitter 必须走它。
-> - **Jina Reader**：直连 DNS 被污染（解析到错误 IP），必须走代理：`curl -x http://127.0.0.1:7890 https://r.jina.ai/URL`。
-> - **Reddit**：本机直连和代理访问 .json / old.reddit 均 403（数据中心 IP 被封），匿名接口已死；
->   备用方案：等 OpenCLI 扩展连上后用 `opencli reddit`，或用 WebSearch/聚合页间接核实。
-> - **小红书 xiaohongshu-mcp**：服务不在时先启动：`cd ~/.agent-reach/tools/xiaohongshu-mcp && nohup ./xiaohongshu-mcp > /tmp/xhs-mcp.log 2>&1 &`
->   启动时不能带代理变量。用 v2.4.3，v2.5.0 在本机段错误。无用户搜索工具，搜用户改用 `opencli xiaohongshu user USER_ID -f yaml`。
->   **冷启动坑**：服务刚重启后直接 `search_feeds` 会 60s 超时 panic（搜索页风控加载慢）；
->   先调一次 `list_feeds` 或 `check_login_status` 预热浏览器，之后搜索即正常。
->   批量调用建议 sleep 2-3s，mcporter 侧超时设 `MCPORTER_CALL_TIMEOUT=180000`。
-> - **雪球**：桌面 Chrome 已登录时优先 `opencli xueqiu`（命令见 references/finance.md）；行情 API 带 Cookie 直连亦可，讨论区有 WAF。
-> - **微信公众号**（2026-09-23 实测）：curl **直连**即可读正文，不要走代理（境外代理 IP 反而触发风控）：
->   `curl -s -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36" "文章URL"`
->   UA 是浏览器递给网站的"名片"，curl 默认名片是 curl/x.x 易被拦，`-A` 换成浏览器名片即可。
->   验证码墙（"环境异常"/poc_token）是**条件触发**（IP 性质、频率、UA），不是必触发；低频+住宅 IP+浏览器 UA 基本不触发。
->   万一撞墙：降频、隔段时间再试。旧结论"curl 过不去"是当时走了代理所致，已作废。
-> - **Cookie 过期**：B站/雪球重新登录 Chrome 后 `agent-reach configure --from-browser chrome --platform <平台>`；
->   Twitter/小红书用 Cookie-Editor 导出后更新对应配置（小红书改完要重启服务）。
-> - **2026-09-17 工具刷新**：opencli 1.8.6→1.8.7、mcporter 0.9.0、yt-dlp 已 force 重装、bili 0.6.2、twitter-cli 0.8.6。
