@@ -56,7 +56,8 @@ description: 生成《合成生物行业周简报》——国外合成生物公�
 ## 故障处理
 
 - 缺 exa-search 技能或 `EXA_API_KEY`：停下来告知用户安装与配置，不静默换引擎；
-- Exa 429/5xx：等 10 秒重试一次，仍失败在汇报里注明（不换引擎，用户指定 Exa）；
+- Exa 429/5xx 或 node 通道网络故障：等 10 秒重试一次；仍失败则用 `scripts/exa-bridge.mjs`（curl 传输层桥，引擎仍是 Exa，用法 `node scripts/exa-bridge.mjs "<query>" [num]`），并在汇报里注明；
+- FDA 数据源不可达：板块标题保留但写「无法核实」（勿写「本期无」——没查到≠没有）；state 的 seen_grns 水位保持，下期差集自动补录；
 - FDA 页面改版：从 `db_home_url` 重核字段/参数，更新工作区 config 并汇报；
 - 某源抓取失败：板块照常出，页脚注明「XX 源本周抓取失败」；
 - 生图失败：无封面出刊，状态行注明。
