@@ -1,0 +1,200 @@
+{
+  "type": "partition_bridge",
+  "title": "纳入迁移的 129 个 FTE:95 在迁移、34 留待第二阶段",
+  "panel_title": "FTE 目标运营模式(TOM)桥接",
+  "columns": [
+    {
+      "id": "baseline",
+      "kind": "stack",
+      "label": "基准 FTE\n(FY25 实际)",
+      "level": 193,
+      "total": 193,
+      "segments": [
+        {
+          "name": "Accounting",
+          "value": 89
+        },
+        {
+          "name": "Customer Service",
+          "value": 45
+        },
+        {
+          "name": "Procurement",
+          "value": 34
+        },
+        {
+          "name": "Sales Support",
+          "value": 25
+        }
+      ]
+    },
+    {
+      "id": "lever1",
+      "kind": "step",
+      "label": "标准化\n提效",
+      "value": 21,
+      "base": 172,
+      "level": 193
+    },
+    {
+      "id": "lever2",
+      "kind": "step",
+      "label": "自营/\n保留范围",
+      "value": 21,
+      "base": 151,
+      "level": 172
+    },
+    {
+      "id": "lever3",
+      "kind": "step",
+      "label": "技术差距/\n运营摩擦",
+      "value": 22,
+      "base": 129,
+      "level": 151
+    },
+    {
+      "id": "in_scope",
+      "kind": "stack",
+      "label": "纳入迁移\n范围",
+      "level": 129,
+      "total": 129,
+      "segments": [
+        {
+          "name": "Accounting",
+          "value": 66
+        },
+        {
+          "name": "Customer Service",
+          "value": 31
+        },
+        {
+          "name": "Procurement",
+          "value": 19
+        },
+        {
+          "name": "Sales Support",
+          "value": 13
+        }
+      ]
+    },
+    {
+      "id": "in_progress",
+      "kind": "stack",
+      "label": "迁移\n进行中",
+      "base": 34,
+      "level": 129,
+      "total": 95,
+      "segments": [
+        {
+          "name": "Accounting",
+          "value": 45
+        },
+        {
+          "name": "Customer Service",
+          "value": 23
+        },
+        {
+          "name": "Procurement",
+          "value": 19
+        },
+        {
+          "name": "Sales Support",
+          "value": 8
+        }
+      ]
+    },
+    {
+      "id": "residual",
+      "kind": "stack",
+      "label": "残余/\n第二阶段",
+      "level": 34,
+      "total": 34,
+      "segments": [
+        {
+          "name": "Accounting",
+          "value": 21
+        },
+        {
+          "name": "Customer Service",
+          "value": 8
+        },
+        {
+          "name": "Procurement",
+          "value": 0
+        },
+        {
+          "name": "Sales Support",
+          "value": 5
+        }
+      ],
+      "emphasis": true
+    }
+  ],
+  "connectors": [
+    {
+      "from": "baseline",
+      "to": "lever1",
+      "level": 193
+    },
+    {
+      "from": "lever1",
+      "to": "lever2",
+      "level": 172
+    },
+    {
+      "from": "lever2",
+      "to": "lever3",
+      "level": 151
+    },
+    {
+      "from": "lever3",
+      "to": "in_scope",
+      "level": 129
+    },
+    {
+      "from": "in_scope",
+      "to": "band",
+      "level": 129
+    },
+    {
+      "from": "in_progress",
+      "to": "residual",
+      "level": 34
+    }
+  ],
+  "annotations": [
+    {
+      "type": "band",
+      "column": "residual",
+      "pad": 52,
+      "top": 200,
+      "bottom": 552,
+      "opacity": 0.6
+    },
+    {
+      "type": "ratio",
+      "column": "residual",
+      "label": "To go",
+      "text": "36%",
+      "cy": 270,
+      "arrow_to": 34
+    }
+  ],
+  "insights": [
+    [
+      "基准负荷",
+      "Accounting 的 89 占基准 193 的 46%,是最大单体。"
+    ],
+    [
+      "优化空间",
+      "前三步合计 -64(193→129),占基准的 33%。"
+    ],
+    [
+      "范围划分",
+      "129 = 95 在迁移 + 34 留待第二阶段;34 为 95 的 36%。"
+    ]
+  ],
+  "source": "示例数据(tc-waterfall-toolkit-finance-2025);单位:FTE",
+  "_kind": "partition",
+  "kicker": null
+}

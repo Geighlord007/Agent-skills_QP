@@ -1,0 +1,5 @@
+{
+  "lollipop": true,
+  "labels": ["Materials", "Sales", "Labor", "R&D", "G&A", "Logistics"],
+  "values": [40, 18, 16, 12, 11, 8]
+}

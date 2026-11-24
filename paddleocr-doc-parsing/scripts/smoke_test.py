@@ -1,45 +1,56 @@
 """
 Smoke Test for PaddleOCR Document Parsing Skill
 
-Verifies configuration and API connectivity.
+Verifies dependencies, configuration, and API connectivity.
 
 Usage:
-    python scripts/smoke_test.py
-    python scripts/smoke_test.py --skip-api-test
-    python scripts/smoke_test.py --test-url "https://example.com/test.pdf"
+    python smoke_test.py
+    python smoke_test.py --skip-api-test
+    python smoke_test.py --test-url "https://example.com/test.pdf"
 """
 
 import argparse
 import sys
 from pathlib import Path
 
-# Add scripts dir to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
+
+from lib import DEFAULT_TIMEOUT, configure_stdio_utf8
+
+configure_stdio_utf8()
 
 
 def print_config_guide() -> None:
-    """Print friendly configuration guide."""
-    from lib import DEFAULT_TIMEOUT
-
+    """Print cross-platform configuration guide (PowerShell and Bash)."""
     print(
         f"""
 ============================================================
-HOW TO GET YOUR API CREDENTIALS
+HOW TO CONFIGURE API CREDENTIALS
 ============================================================
 
-1. Visit: https://www.paddleocr.com
-2. Open your model's API page and sign in
-3. Open your model's Example Code section
-4. In Example Code, copy the API URL value
-5. In Example Code, copy the Access Token value
+1. Visit https://www.paddleocr.com -> click API -> choose a model
+   (e.g. PaddleOCR-VL-1.6, PaddleOCR-VL-1.5, or PP-StructureV3)
+2. Copy the API URL (ending with /layout-parsing) and Access Token
 
-Set environment variables:
-  export PADDLEOCR_DOC_PARSING_API_URL=https://your-api-url.paddleocr.com/layout-parsing
-  export PADDLEOCR_ACCESS_TOKEN=your_token_here
-  export PADDLEOCR_DOC_PARSING_TIMEOUT={DEFAULT_TIMEOUT}  # optional
+PowerShell (current session):
+  $env:PADDLEOCR_DOC_PARSING_API_URL = "https://your-service.paddleocr.com/layout-parsing"
+  $env:PADDLEOCR_ACCESS_TOKEN = "your_token_here"
+  $env:PADDLEOCR_DOC_PARSING_TIMEOUT = "{DEFAULT_TIMEOUT}"  # optional
 
+PowerShell (persist for user):
+  setx PADDLEOCR_DOC_PARSING_API_URL "https://your-service.paddleocr.com/layout-parsing"
+  setx PADDLEOCR_ACCESS_TOKEN "your_token_here"
+
+Bash / zsh:
+  export PADDLEOCR_DOC_PARSING_API_URL="https://your-service.paddleocr.com/layout-parsing"
+  export PADDLEOCR_ACCESS_TOKEN="your_token_here"
+  export PADDLEOCR_DOC_PARSING_TIMEOUT="{DEFAULT_TIMEOUT}"  # optional
+
+Self-hosted local service:
+  http://127.0.0.1:<port>/layout-parsing is also allowed.
 ============================================================
-"""
+""",
+        file=sys.stderr,
     )
 
 
@@ -60,23 +71,16 @@ def main() -> int:
     print("=" * 60)
 
     print("\n[1/3] Checking dependencies...")
-
     try:
         import httpx
 
         print(f"  + httpx: {httpx.__version__}")
     except ImportError:
-        print("  X httpx not installed")
-        print(
-            "\nPlease install dependencies (from the skill directory, one level above scripts/):"
-        )
-        print("  pip install -r requirements.txt")
-        print("or at minimum:")
-        print("  pip install httpx")
+        print("  X httpx not installed", file=sys.stderr)
+        print("  Install with: pip install httpx", file=sys.stderr)
         return 1
 
     print("\n[2/3] Checking configuration...")
-
     from lib import get_config
 
     try:
@@ -85,7 +89,7 @@ def main() -> int:
         masked_token = token[:8] + "..." + token[-4:] if len(token) > 12 else "***"
         print(f"  + PADDLEOCR_ACCESS_TOKEN: {masked_token}")
     except ValueError as e:
-        print(f"  X {e}")
+        print(f"  X {e}", file=sys.stderr)
         print_config_guide()
         return 1
 
@@ -97,7 +101,6 @@ def main() -> int:
         return 0
 
     print("\n[3/3] Testing API connectivity...")
-
     test_url = (
         args.test_url
         or "https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/pp_structure_v3_demo.png"
@@ -107,19 +110,20 @@ def main() -> int:
     from lib import parse_document
 
     result = parse_document(file_url=test_url)
-
     if not result.get("ok"):
         error = result.get("error", {})
-        print(f"\n  X API call failed: {error.get('message')}")
+        print(
+            f"\n  X API call failed ({error.get('code')}): {error.get('message')}",
+            file=sys.stderr,
+        )
         if "Authentication" in error.get("message", ""):
-            print("\n  Hint: Check if your token is correct and not expired.")
             print(
-                "        Get a new token from the PaddleOCR page example code section."
+                "  Hint: Verify PADDLEOCR_ACCESS_TOKEN is valid and not expired.",
+                file=sys.stderr,
             )
         return 1
 
     print("  + API call successful!")
-
     text = result.get("text", "")
     if text:
         preview = text[:200].replace("\n", " ")
@@ -130,13 +134,6 @@ def main() -> int:
     print("\n" + "=" * 60)
     print("Smoke Test PASSED")
     print("=" * 60)
-    print("\nNext steps:")
-    print('  python scripts/layout_caller.py --file-url "URL"')
-    print('  python scripts/layout_caller.py --file-path "doc.pdf"')
-    print(
-        "  Results are auto-saved to the system temp directory; the caller prints the saved path."
-    )
-
     return 0
 
 

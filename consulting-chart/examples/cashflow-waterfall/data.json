@@ -1,0 +1,21 @@
+{
+  "columns": [
+    {"kind": "start", "label": "EBITDA", "value": 250, "pct": "9"},
+    {"kind": "delta", "label": "应收+存货", "value": -45, "pct": "-29"},
+    {"kind": "delta", "label": "应付账款", "value": 15, "pct": "50"},
+    {"kind": "delta", "label": "非现金项目", "value": -40, "pct": "-33"},
+    {"kind": "delta", "label": "一次性重组", "value": -12, "pct": "52"},
+    {"kind": "delta", "label": "汇兑损益", "value": 8, "pct": "-260"},
+    {"kind": "subtotal", "label": "经营性现金流", "value": 176, "pct": "21"},
+    {"kind": "delta", "label": "维护capex", "value": -30, "pct": "-20"},
+    {"kind": "delta", "label": "增长capex", "value": -280, "pct": "-10"},
+    {"kind": "delta", "label": "利息支出", "value": -15, "pct": "-25"},
+    {"kind": "delta", "label": "税费", "value": -22, "pct": "-10"},
+    {"kind": "delta", "label": "资产出售", "value": 18, "pct": "80"},
+    {"kind": "end", "label": "自由现金流", "value": -153, "pct": "-50"}
+  ],
+  "brackets": [
+    {"from": 0, "to": 6, "text": "-74", "at": 148},
+    {"from": 0, "to": 12, "text": "-403", "at": 132, "arrow": true, "arrow_to": -153}
+  ]
+}

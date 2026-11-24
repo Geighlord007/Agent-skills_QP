@@ -7,17 +7,17 @@ description: 生成《合成生物行业周简报》——国外合成生物公�
 
 自包含技能包：运行所需的一切都在本目录（`assets/`、`scripts/`），运行时只读写一个**工作区**目录。不依赖任何会话历史——单凭本文件即可完整出刊。
 
-**前置条件**：Node.js 18+；exa-search 技能（需 `EXA_API_KEY`）；可选 `ARK_API_KEY`（生图，不用图可关）。
+**前置条件**：Node.js 18+；exa-search 技能或 `EXA_API_KEY`；可选 `ARK_API_KEY`（生图，不用图可关）。
 
 ## 工作区标准布局（技能负责建立与维护）
 
-工作区 = 调用时由调用方指定的目录（写在调用语句/定时任务 prompt 里；原作者项目示例为 `<用户文档目录>\每周报告\synbio`）。首次运行按下表建目录：
+工作区 = 调用时由调用方指定的目录（写在调用语句/定时任务 prompt 里；示例：`<用户文档目录>\每周报告\synbio`）。首次运行按下表建目录：
 
 ```
 <workspace>/
 ├── config.json          # 由 assets/config.defaults.json 复制生成；用户个性化（含 api_key）只写这里
 ├── data/state.json      # 跨期去重记录（自动维护）：seen_urls / seen_grns / seen_grn_letters / last_issue
-├── briefings/           # 每期产出：YYYY-MM-DD.md + YYYY-MM-DD.html（单文件，封面已内联）
+├── briefings/           # 每期产出：YYYY-MM-DD.md + YYYY-MM-DD.html（单文件，封面与字体已内联）
 ├── briefings/assets/    # 封面图存档
 └── research/            # 调研类产出，命名 YYYY-MM-DD-主题.md
 ```
@@ -27,11 +27,12 @@ description: 生成《合成生物行业周简报》——国外合成生物公�
 | 文件 | 用途 |
 |---|---|
 | `assets/design-language.md` | 设计契约（色彩/字阶/图表/双语/禁用清单）——视觉不合即返工 |
-| `assets/fonts/` | 打包字体：Newsreader / Schibsted Grotesk / DM Mono（latin 子集 woff2，SIL OFL，见 OFL.txt）；embed 时内联进 HTML，跨机渲染一致 |
+| `assets/fonts/` | 打包字体：Newsreader / Schibsted Grotesk / DM Mono（latin 子集 woff2，SIL OFL，见 OFL.txt）；embed 时自动从技能包内联进 HTML |
 | `assets/config.defaults.json` | 配置默认值：信息源/关键词/watchlist/法规线/生图；缺 config.json 时复制到工作区 |
 | `assets/briefing.md.tpl` · `assets/briefing.html.tpl` | 两版模板，占位符填写，结构与 class 不改 |
 | `scripts/gen-image.mjs` | 生图：`node scripts/gen-image.mjs <workspace> "<主题意象>" [size] [outfile] [--raw]` |
-| `scripts/embed-images.mjs` | 封面内联：`node scripts/embed-images.mjs <html文件>` |
+| `scripts/embed-images.mjs` | 封面与字体内联：`node scripts/embed-images.mjs <html文件>`（自动回退读取技能包 `assets/fonts/`，无需复制到工作区） |
+| `scripts/exa-bridge.mjs` | Exa curl 传输桥（node fetch 不通时绕行，stdin 传密钥）：`node scripts/exa-bridge.mjs "<query>" [num] [--category news] [--days 10]` |
 
 ## 流程（十步，按序执行）
 
@@ -43,7 +44,7 @@ description: 生成《合成生物行业周简报》——国外合成生物公�
 6. **筛选与分档**：blacklist 丢弃；多源同事件合并（主链取最全，其余列「另见」）；boost_terms / watchlist 命中升档并加 WATCHLIST 标签。分档：**KEY/重点**=融资/基金关闭/监管申报或批准/大额合作/产能落地；**WATCH/关注**=中小合作/grant/技术验证；**BRIEF/简讯**=周边动态。金额换算 USD 标口径。
 7. **写 MD**：按 `assets/briefing.md.tpl` 填占位符。条目 = 档位 + 中文事实句 + *英文 one-liner* + PROFILE/TECH/TERMS（KEY 加 WHY）+ 来源行 `Source: X · Retrieved YYYY-MM-DD`。
 8. **写 HTML**：按 `assets/briefing.html.tpl` 并遵守 `assets/design-language.md`——零圆角、仅 400 字重、双语堆叠不混排、条目左强调条盒子（key=CLAY/watch=MEADOW/brief=SEED_BROWN）、图表一图一结论（.subj 高亮主角）、来源行强制。
-9. **封面图**：`node scripts/gen-image.mjs <workspace> "<本期主题物意象>"`（风格锚自动前置）；失败一次则无封面出刊并在状态行注明。HTML 写完后先确认 `<html所在目录>/assets/fonts/` 存在（缺则从技能包 `assets/fonts/` 复制），再 `node scripts/embed-images.mjs <html>` 把封面与打包字体一并内联为 data URI。
+9. **封面图与内联**：`node scripts/gen-image.mjs <workspace> "<本期主题物意象>"`（风格锚自动前置）；失败一次则无封面出刊（删除 `.cover-box`/`.cover-cap`）并在状态行注明。HTML 写完后直接运行 `node scripts/embed-images.mjs <html>`，脚本会自动将封面图与技能包内置 `assets/fonts/` 字体一并内联为 data URI（无需手工复制字体到工作区）。
 10. **更新与汇报**：state.json 追加 seen_urls/seen_grns/seen_grn_letters、写 last_issue；汇报各板块条目数、KEY 条目 1–2 句、两个文件完整路径、空栏目与失败源（如有）。
 
 ## 质量红线（与设计合规同等刚性）

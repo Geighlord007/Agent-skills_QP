@@ -1,0 +1,9 @@
+{
+  "radar": true,
+  "dimensions": ["Cost", "Speed", "Quality", "Risk", "Scalability"],
+  "series": [
+    {"name": "Current", "values": [60, 55, 70, 50, 65]},
+    {"name": "Target 2027", "values": [80, 75, 85, 70, 80]},
+    {"name": "Peer median", "values": [65, 60, 70, 60, 60]}
+  ]
+}

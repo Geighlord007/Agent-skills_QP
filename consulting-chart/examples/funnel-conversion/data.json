@@ -1,0 +1,5 @@
+{
+  "funnel": true,
+  "stages": ["Visitors", "Leads", "Qualified", "Closed"],
+  "values": [1000, 320, 120, 30]
+}

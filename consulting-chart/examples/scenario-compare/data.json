@@ -1,0 +1,7 @@
+{
+  "scenarios": {
+    "Scenario 1": {"Revenue": 115, "COGS": 56, "Gross Profit": 59, "OPEX": 37, "EBITDA": 22},
+    "Scenario 2": {"Revenue": 125, "COGS": 60, "Gross Profit": 65, "OPEX": 43, "EBITDA": 22},
+    "Scenario 3": {"Revenue": 132, "COGS": 64, "Gross Profit": 68, "OPEX": 41, "EBITDA": 27}
+  }
+}

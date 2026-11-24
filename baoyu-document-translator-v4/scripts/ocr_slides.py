@@ -1,6 +1,9 @@
-# 页面图内文字 OCR（百度 AI Studio 异步接口）。
-# 调用方式沿用 exhibition-notes 技能的 scripts/ocr_aistudio.py；此处额外保留原始
-# JSONL（含版面位置信息），供"图内文字带位置登记"使用。
+# -*- coding: utf-8 -*-
+"""页面图内文字 OCR（百度 AI Studio 异步接口，保留带位置原始 JSONL）。
+
+未配置 AISTUDIO_OCR_TOKEN / aistudio.key 时默认降级跳过（exit 0，不阻断主链）；
+传入 --strict 时在缺少 token 情况下报错退出。
+"""
 import argparse
 import io
 import json
@@ -11,13 +14,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+    for _s in (sys.stdout, sys.stderr):
+        if hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8", errors="replace")
 
 import requests
 
 DEFAULT_URL = "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs"
-OPT_PAYLOAD = {"useDocOrientationClassify": False, "useDocUnwarping": False, "useChartRecognition": False}
+OPT_PAYLOAD = {
+    "useDocOrientationClassify": False,
+    "useDocUnwarping": False,
+    "useChartRecognition": False,
+}
 
 
 def ocr_one(fp: Path, out_dir: Path, url: str, token: str, model: str, retries: int = 3) -> dict:
@@ -28,7 +36,7 @@ def ocr_one(fp: Path, out_dir: Path, url: str, token: str, model: str, retries: 
     for attempt in range(retries):
         try:
             data = {"model": model, "optionalPayload": json.dumps(OPT_PAYLOAD)}
-            with open(fp, "rb") as f:
+            with fp.open("rb") as f:
                 r = requests.post(url, headers=headers, data=data, files={"file": f}, timeout=120)
             if r.status_code != 200:
                 last = f"submit HTTP {r.status_code}: {r.text[:200]}"
@@ -84,16 +92,18 @@ def main():
     ap.add_argument("--limit", type=int, default=0, help="只处理前 N 张（0=全部）")
     ap.add_argument("--url", default=os.getenv("AISTUDIO_OCR_URL", DEFAULT_URL))
     ap.add_argument("--token", default=os.getenv("AISTUDIO_OCR_TOKEN", ""))
-    ap.add_argument("--token-file", default=str(Path.home() / ".agents" / "keys" / "aistudio.key"),
-                    help="token 文件（环境变量优先）")
+    ap.add_argument(
+        "--token-file",
+        default=str(Path.home() / ".agents" / "keys" / "aistudio.key"),
+        help="token 文件（环境变量优先）",
+    )
     ap.add_argument("--model", default=os.getenv("AISTUDIO_OCR_MODEL", "PaddleOCR-VL-1.6"))
+    ap.add_argument(
+        "--strict",
+        action="store_true",
+        help="缺少 token 时报错退出而非降级跳过",
+    )
     args = ap.parse_args()
-
-    token = args.token
-    if not token and Path(args.token_file).is_file():
-        token = Path(args.token_file).read_text(encoding="utf-8").strip()
-    if not token:
-        sys.exit("缺少 token：设置 AISTUDIO_OCR_TOKEN、--token，或写入 ~/.agents/keys/aistudio.key")
 
     src = Path(args.images_dir).resolve()
     if not src.is_dir():
@@ -102,6 +112,21 @@ def main():
     if not out_dir.is_absolute():
         out_dir = src / args.out
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    token = args.token.strip()
+    token_file = Path(args.token_file).expanduser()
+    if not token and token_file.is_file():
+        token = token_file.read_text(encoding="utf-8").strip()
+    if not token:
+        msg = (
+            "未配置 AISTUDIO_OCR_TOKEN / --token / "
+            f"{token_file}，跳过图内文字 OCR 登记（不阻断主链）"
+        )
+        if args.strict:
+            sys.exit(f"缺少 token（--strict 模式）：{msg}")
+        print(f"[ocr_slides] {msg}", flush=True)
+        (out_dir / "_manifest.json").write_text("[]\n", encoding="utf-8")
+        return
 
     files = sorted(p for p in src.glob("*.jpg") if p.stat().st_size > 0)
     if args.limit > 0:
@@ -120,11 +145,15 @@ def main():
             info = fut.result()
             results.append(info)
             tag = "OK " if info["ok"] else "FAIL"
-            print(f"  [{done}/{len(files)}] {tag} {info['file']}  chars={info['chars']}"
-                  + (f"  err={info['error']}" if info["error"] else ""), flush=True)
+            print(
+                f"  [{done}/{len(files)}] {tag} {info['file']}  chars={info['chars']}"
+                + (f"  err={info['error']}" if info["error"] else ""),
+                flush=True,
+            )
 
     (out_dir / "_manifest.json").write_text(
-        json.dumps(results, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        json.dumps(results, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
+    )
     ok = sum(1 for r in results if r["ok"])
     print(f"[ocr_slides] 完成 {time.time() - t0:.0f}s: {ok}/{len(results)} ok")
     if ok != len(results):

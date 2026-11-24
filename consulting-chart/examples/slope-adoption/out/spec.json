@@ -1,0 +1,51 @@
+{
+  "type": "slope",
+  "title": "AI 采纳率:West 从 15% 升到 27%,升幅最大",
+  "panel_title": "区域 AI 采纳率(2021 vs 2025,%)",
+  "t1": "2021",
+  "t2": "2025",
+  "entities": [
+    {
+      "name": "North",
+      "from": 10,
+      "to": 18
+    },
+    {
+      "name": "East",
+      "from": 8,
+      "to": 14
+    },
+    {
+      "name": "South",
+      "from": 12,
+      "to": 13
+    },
+    {
+      "name": "West",
+      "from": 15,
+      "to": 27
+    },
+    {
+      "name": "Central",
+      "from": 6,
+      "to": 9
+    }
+  ],
+  "insights": [
+    [
+      "West 升幅最大",
+      "15% → 27%,+12pp。"
+    ],
+    [
+      "South 升幅最小",
+      "12% → 13%,+1pp。"
+    ],
+    [
+      "全部上升",
+      "五个区域没有下降项。"
+    ]
+  ],
+  "source": "示例数据(斜率图用例)",
+  "_kind": "slope",
+  "kicker": null
+}

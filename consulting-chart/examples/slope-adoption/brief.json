@@ -1,0 +1,18 @@
+{
+  "case": "slope-adoption",
+  "title": "AI 采纳率:West 从 15% 升到 27%,升幅最大",
+  "panel_title": "区域 AI 采纳率(2021 vs 2025,%)",
+  "purpose": "区域采纳率复盘;看起点、终点与变化幅度",
+  "decision": "把 West 的做法复制到 South 与 Central",
+  "story": "五个区域全部上升;West +12pp 最大,South +1pp 最小。",
+  "questions": [
+    "各区域起点与终点是多少?",
+    "哪个区域升幅最大?"
+  ],
+  "insights": [
+    ["West 升幅最大", "15% → 27%,+12pp。"],
+    ["South 升幅最小", "12% → 13%,+1pp。"],
+    ["全部上升", "五个区域没有下降项。"]
+  ],
+  "source": "示例数据(斜率图用例)"
+}

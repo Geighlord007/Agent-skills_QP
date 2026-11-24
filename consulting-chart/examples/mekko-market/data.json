@@ -1,0 +1,8 @@
+{
+  "mekko": true,
+  "segments": [
+    {"name": "Cloud", "width": 45, "shares": {"领导者": 70, "其他": 30}},
+    {"name": "On-prem", "width": 30, "shares": {"领导者": 35, "其他": 65}},
+    {"name": "Edge", "width": 25, "shares": {"领导者": 55, "其他": 45}}
+  ]
+}

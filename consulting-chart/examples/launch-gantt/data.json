@@ -1,0 +1,24 @@
+{
+  "schedule": true,
+  "months": ["7月", "8月", "9月", "10月", "11月"],
+  "phases": [
+    {"label": "探索与设计", "start": [0, 0], "end": [1, 0.55], "color": "accent"},
+    {"label": "开发", "start": [1, 0.55], "end": [3, 0.30], "color": "primary"},
+    {"label": "发布与迭代", "start": [3, 0.30], "end": [5, 0], "color": "pos"}
+  ],
+  "tasks": [
+    {"label": "需求评审", "start": [0, 0.05], "end": [0, 0.95], "owner": "产品经理", "status": "done", "color": "accent"},
+    {"label": "产品设计", "start": [0, 0.55], "end": [1, 0.45], "owner": "设计负责人", "status": "done", "color": "accent"},
+    {"label": "平台开发", "start": [1, 0.55], "end": [3, 0.10], "owner": "工程负责人", "status": "doing", "color": "primary"},
+    {"label": "集成与测试", "start": [1, 0.75], "end": [3, 0.20], "owner": "工程负责人", "status": "doing", "color": "primary"},
+    {"label": "发布就绪", "start": [3, 0.30], "end": [3, 0.65], "owner": "DevOps 负责人", "status": "todo", "color": "pos"},
+    {"label": "采用与优化", "start": [3, 0.70], "end": [4, 0.75], "owner": "工程负责人", "status": "todo", "color": "pos"}
+  ],
+  "band_rows": [[2, 4]],
+  "today": [2, 0.5],
+  "milestones": [
+    {"label": "代码冻结", "at": [3, 0.10], "kind": "diamond", "row": 2},
+    {"label": "上线", "at": [3, 0.65], "kind": "go_live", "row": 4}
+  ],
+  "status_label": "当前状态:按计划推进"
+}

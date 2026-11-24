@@ -1,0 +1,8 @@
+vendor/*
+!vendor/geo/
+!vendor/geo/**
+!vendor/VENDOR.md
+__pycache__/
+*.pyc
+examples/_batch/
+*.tmp

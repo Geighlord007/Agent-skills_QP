@@ -1,0 +1,19 @@
+{
+  "case": "matrix-2x2",
+  "title": "成本杠杆矩阵:Quick Wins 先做,Big Bets 单独立项",
+  "panel_title": "成本杠杆矩阵(影响 × 可行性)",
+  "purpose": "杠杆优先级排序;按影响与可行性分区",
+  "decision": "确定先执行与单独立项的杠杆",
+  "story": "Prompt caching 与 Batch API 落在 Quick Wins;GPU utilization 影响最大但可行性低,属于 Big Bets。",
+  "questions": [
+    "哪些杠杆可以先做?",
+    "哪些需要单独立项?",
+    "三类杠杆各自分布在哪?"
+  ],
+  "insights": [
+    ["Quick Wins", "Prompt caching、Batch API 位于高影响、高可行区,优先执行。"],
+    ["Big Bets", "GPU utilization 影响最大、可行性低,需单独立项。"],
+    ["小影响项", "Rate cards 属 Small Wins;Volume commits 属 Long-tail,暂缓。"]
+  ],
+  "source": "示例数据(2×2 用例)"
+}

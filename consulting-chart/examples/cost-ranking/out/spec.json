@@ -1,0 +1,38 @@
+{
+  "type": "lollipop",
+  "title": "成本与费用排名:材料 40 居首,销售 18 次之",
+  "panel_title": "单项成本与费用(US$ M)",
+  "labels": [
+    "Materials",
+    "Sales",
+    "Labor",
+    "R&D",
+    "G&A",
+    "Logistics"
+  ],
+  "values": [
+    40,
+    18,
+    16,
+    12,
+    11,
+    8
+  ],
+  "insights": [
+    [
+      "材料居首",
+      "40,占六项合计 105 的 38%。"
+    ],
+    [
+      "销售次之",
+      "18,是 OPEX 内最大项。"
+    ],
+    [
+      "尾部较小",
+      "研发与管理合计 23;物流 8 最小。"
+    ]
+  ],
+  "source": "示例数据(情景对比用例的 Scenario 3 成本拆分)",
+  "_kind": "lollipop",
+  "kicker": null
+}

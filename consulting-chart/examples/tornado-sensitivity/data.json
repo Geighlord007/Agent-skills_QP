@@ -1,0 +1,13 @@
+{
+  "labels": [
+    "Variable 1\n1.0 - 5.0",
+    "Variable 2\n11% - 15%",
+    "Variable 3\n$200 - $300",
+    "Variable 4\n$12 - $14",
+    "Variable 5\nOff - On",
+    "Variable 6\nLow - High"
+  ],
+  "low": [19.5, 18, 15.5, 12, 32.5, 4],
+  "high": [20.5, 22, 24.5, 28, 7.5, 36],
+  "midpoint": 20
+}

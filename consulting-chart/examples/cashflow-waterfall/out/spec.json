@@ -1,0 +1,124 @@
+{
+  "type": "waterfall",
+  "columns": [
+    {
+      "kind": "start",
+      "label": "EBITDA",
+      "value": 250,
+      "pct": "9"
+    },
+    {
+      "kind": "delta",
+      "label": "应收+存货",
+      "value": -45,
+      "pct": "-29"
+    },
+    {
+      "kind": "delta",
+      "label": "应付账款",
+      "value": 15,
+      "pct": "50"
+    },
+    {
+      "kind": "delta",
+      "label": "非现金项目",
+      "value": -40,
+      "pct": "-33"
+    },
+    {
+      "kind": "delta",
+      "label": "一次性重组",
+      "value": -12,
+      "pct": "52"
+    },
+    {
+      "kind": "delta",
+      "label": "汇兑损益",
+      "value": 8,
+      "pct": "-260"
+    },
+    {
+      "kind": "subtotal",
+      "label": "经营性现金流",
+      "value": 176,
+      "pct": "21"
+    },
+    {
+      "kind": "delta",
+      "label": "维护capex",
+      "value": -30,
+      "pct": "-20"
+    },
+    {
+      "kind": "delta",
+      "label": "增长capex",
+      "value": -280,
+      "pct": "-10"
+    },
+    {
+      "kind": "delta",
+      "label": "利息支出",
+      "value": -15,
+      "pct": "-25"
+    },
+    {
+      "kind": "delta",
+      "label": "税费",
+      "value": -22,
+      "pct": "-10"
+    },
+    {
+      "kind": "delta",
+      "label": "资产出售",
+      "value": 18,
+      "pct": "80"
+    },
+    {
+      "kind": "end",
+      "label": "自由现金流",
+      "value": -153,
+      "pct": "-50"
+    }
+  ],
+  "title": "利润优化全貌:EBITDA 250 收缩到自由现金流 -153 的桥接",
+  "panel_title": "自由现金流桥(2025 财年,US$ M)",
+  "insights": [
+    [
+      "资本开支主导缺口",
+      "增长性资本开支 280 是 -153 自由现金流的主要驱动。"
+    ],
+    [
+      "经营层面增长",
+      "经营性现金流同比 +21%,重组拖累下仍改善。"
+    ],
+    [
+      "营运资本净占用",
+      "应收+存货 -45、应付 +15,合计 -30,占用大于释放。"
+    ]
+  ],
+  "source": "示例数据(tc-waterfall-toolkit-finance-2025);单位:US$ M",
+  "note": "",
+  "show_pct": true,
+  "annotations": [
+    {
+      "type": "bracket",
+      "from": 0,
+      "to": 6,
+      "text": "-74",
+      "y": 148,
+      "arrow": false,
+      "arrow_to": null
+    },
+    {
+      "type": "bracket",
+      "from": 0,
+      "to": 12,
+      "text": "-403",
+      "y": 132,
+      "arrow": true,
+      "arrow_to": -153
+    }
+  ],
+  "_kind": "bridge",
+  "kicker": null
+}

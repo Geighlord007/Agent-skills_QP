@@ -1,80 +1,75 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""把「议程 + 录音↔场次映射 + 照片↔场次映射」拼成每场档案 talk_dossier.json。
+"""拼装每场档案 talk_dossier.json（同时支持 Mode A 仅照片 与 Mode B 照片+录音）。
 
-输入：
-  --agenda       agenda.json   [{id,time,title,speaker,affiliation}, ...]   （主代理从用户给的日程整理）
-  --rec-map      rec_to_talk.json  {"<录音文件名>": "<talk id>", ...}        （主代理据时间轴对齐后给出）
-  --photo-map    photo_session_map.json   （scan_media.py 产出）
-  --timeline     timeline.json            （scan_media.py 产出，用于 session index → 录音文件名）
-  --transcript-dir  转写稿目录（默认 record/transcript）
-  --transcript-suffix  转写稿后缀（默认 _转写.md，qwen-asr-transcribe 技能的命名）
-  --ocr-dir      OCR 结果目录（默认 _work/ocr，每张图 <stem>.md）
-  --out          talk_dossier.json
+Mode B（照片 + 录音）：
+  需要 --agenda + --rec-map + --photo-map + --timeline，按议程顺序汇总每场转写稿与照片。
 
-输出 talk_dossier.json：按议程顺序，每场含 meta + transcripts[] + photos[]（带 compressed/ocr_md 路径）。
-后续由子代理读取每场的转写+OCR 提取要点，再由 make_minutes_docx.py 装配成 docx。
+Mode A（仅照片）：
+  传 --mode a（或不传 --rec-map 时自动走 Mode A），直接按 timeline.json 的 session index 聚合照片。
+  - 若提供 --agenda（用户确认后的主题列表），优先按条目的 session / sessions 字段绑定场次，
+    否则按顺序对应 timeline 场次。
+  - 若不提供 --agenda，则直接以 timeline.json 的各场次生成档案（id 为 session_1, session_2, ...）。
+
+输出 talk_dossier.json：每场含 meta + transcripts[] + photos[]（含 stem / compressed / ocr_md）。
+后续由子代理读取转写+OCR 提取要点，再由 make_minutes_docx.py 装配成 docx。
 """
 import argparse
-import io
+import datetime as dt
 import json
 import sys
-import datetime as dt
 from collections import defaultdict
 from pathlib import Path
 
-if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
 
 
-def main():
-    ap = argparse.ArgumentParser(description="拼装每场档案 talk_dossier.json")
-    ap.add_argument("--agenda", required=True, help="agenda.json")
-    ap.add_argument("--rec-map", required=True, help="rec_to_talk.json")
-    ap.add_argument("--photo-map", required=True, help="photo_session_map.json")
-    ap.add_argument("--timeline", required=True, help="timeline.json")
-    ap.add_argument("--transcript-dir", default="record/transcript")
-    ap.add_argument("--transcript-suffix", default="_转写.md")
-    ap.add_argument("--ocr-dir", default="_work/ocr")
-    ap.add_argument("--tz", type=float, default=8.0, help="录音内嵌 UTC 的本地时区偏移（默认 +8）")
-    ap.add_argument("--ffprobe", default="ffprobe")
-    ap.add_argument("--out", default="_work/talk_dossier.json")
-    args = ap.parse_args()
+def fmt_interval(start_iso, end_iso) -> str:
+    if not start_iso or not end_iso:
+        return ""
+    st = dt.datetime.fromisoformat(start_iso).strftime("%H:%M")
+    en = dt.datetime.fromisoformat(end_iso).strftime("%H:%M")
+    return f"{st}–{en}"
 
-    agenda = json.loads(Path(args.agenda).read_text(encoding="utf-8"))
-    rec_map = json.loads(Path(args.rec_map).read_text(encoding="utf-8"))
-    photo_map = json.loads(Path(args.photo_map).read_text(encoding="utf-8"))
-    timeline = json.loads(Path(args.timeline).read_text(encoding="utf-8"))
 
-    # session index -> 录音文件名
+def make_photo_item(p: dict, ocr_dir: Path) -> dict:
+    stem = p.get("stem") or Path(p["file"]).stem
+    return {
+        "file": p["file"],
+        "stem": stem,
+        "exif": p.get("exif"),
+        "compressed": p.get("compressed"),
+        "ocr_md": str(ocr_dir / f"{stem}.md"),
+    }
+
+
+def build_mode_b(agenda, rec_map, photo_map, timeline, tr_dir: Path, tr_suffix: str, ocr_dir: Path):
     idx_to_record = {s["index"]: s.get("record") for s in timeline}
-    # 录音文件名 -> talk id
-    # 照片按 talk 聚合
+
     photos_by_talk = defaultdict(list)
     for p in photo_map:
         rec_file = idx_to_record.get(p.get("session"))
         tid = rec_map.get(rec_file) if rec_file else None
         if not tid:
             continue
-        photos_by_talk[tid].append({
-            "file": p["file"], "exif": p.get("exif"),
-            "compressed": p.get("compressed"),
-            "ocr_md": str(Path(args.ocr_dir) / f"{p['stem']}.md"),
-        })
+        photos_by_talk[tid].append(make_photo_item(p, ocr_dir))
     for tid in photos_by_talk:
         photos_by_talk[tid].sort(key=lambda x: x.get("exif") or "")
 
-    # 转写稿按 talk 聚合
     tr_by_talk = defaultdict(list)
-    tr_dir = Path(args.transcript_dir)
     for rec_file, tid in rec_map.items():
         stem = Path(rec_file).stem
-        md = tr_dir / f"{stem}{args.transcript_suffix}"
-        tr_by_talk[tid].append({
-            "recording": rec_file, "transcript_md": str(md),
-            "exists": md.exists(), "size": md.stat().st_size if md.exists() else 0,
-        })
+        md = tr_dir / f"{stem}{tr_suffix}"
+        tr_by_talk[tid].append(
+            {
+                "recording": rec_file,
+                "transcript_md": str(md),
+                "exists": md.exists(),
+                "size": md.stat().st_size if md.exists() else 0,
+            }
+        )
 
     dossier = []
     missing_tr = []
@@ -83,37 +78,144 @@ def main():
         recs = [rf for rf, t in rec_map.items() if t == tid]
         intervals = []
         for rf in recs:
-            # 从 timeline 里取该录音的 start/end（若有）
             for s in timeline:
                 if s.get("record") == rf and s.get("start"):
-                    st = dt.datetime.fromisoformat(s["start"]).strftime("%H:%M")
-                    en = dt.datetime.fromisoformat(s["end"]).strftime("%H:%M")
-                    intervals.append(f"{st}–{en}")
+                    iv = fmt_interval(s.get("start"), s.get("end"))
+                    if iv:
+                        intervals.append(iv)
                     break
         trs = tr_by_talk.get(tid, [])
         for t in trs:
             if not t["exists"]:
                 missing_tr.append((tid, t["recording"]))
-        dossier.append({
-            "id": tid,
-            "agenda_time": entry.get("time", ""),
-            "recorded_time": " / ".join(intervals),
-            "title": entry.get("title", ""),
-            "speaker": entry.get("speaker", ""),
-            "affiliation": entry.get("affiliation", ""),
-            "transcripts": trs,
-            "photos": photos_by_talk.get(tid, []),
-            "n_photos": len(photos_by_talk.get(tid, [])),
-        })
+        photos = photos_by_talk.get(tid, [])
+        dossier.append(
+            {
+                "id": tid,
+                "agenda_time": entry.get("time", ""),
+                "recorded_time": " / ".join(intervals),
+                "title": entry.get("title", ""),
+                "speaker": entry.get("speaker", ""),
+                "affiliation": entry.get("affiliation", ""),
+                "transcripts": trs,
+                "photos": photos,
+                "n_photos": len(photos),
+            }
+        )
+    return dossier, missing_tr
+
+
+def build_mode_a(agenda, photo_map, timeline, ocr_dir: Path):
+    photos_by_session = defaultdict(list)
+    for p in photo_map:
+        sess_idx = p.get("session")
+        if sess_idx is None:
+            continue
+        photos_by_session[sess_idx].append(make_photo_item(p, ocr_dir))
+    for idx in photos_by_session:
+        photos_by_session[idx].sort(key=lambda x: x.get("exif") or "")
+
+    sess_by_idx = {s["index"]: s for s in timeline}
+    dossier = []
+
+    if agenda:
+        for i, entry in enumerate(agenda):
+            if "sessions" in entry and isinstance(entry["sessions"], list):
+                indices = entry["sessions"]
+            elif "session" in entry and entry["session"] is not None:
+                indices = [entry["session"]]
+            elif i < len(timeline):
+                indices = [timeline[i]["index"]]
+            else:
+                indices = []
+
+            photos = []
+            intervals = []
+            for idx in indices:
+                photos.extend(photos_by_session.get(idx, []))
+                s = sess_by_idx.get(idx)
+                if s:
+                    iv = fmt_interval(s.get("start"), s.get("end"))
+                    if iv:
+                        intervals.append(iv)
+            photos.sort(key=lambda x: x.get("exif") or "")
+
+            dossier.append(
+                {
+                    "id": entry.get("id", f"session_{i + 1}"),
+                    "agenda_time": entry.get("time") or " / ".join(intervals),
+                    "recorded_time": "",
+                    "title": entry.get("title", f"场次{i + 1}"),
+                    "speaker": entry.get("speaker", ""),
+                    "affiliation": entry.get("affiliation", ""),
+                    "transcripts": [],
+                    "photos": photos,
+                    "n_photos": len(photos),
+                }
+            )
+    else:
+        for s in timeline:
+            idx = s["index"]
+            photos = photos_by_session.get(idx, [])
+            dossier.append(
+                {
+                    "id": f"session_{idx + 1}",
+                    "agenda_time": fmt_interval(s.get("start"), s.get("end")),
+                    "recorded_time": "",
+                    "title": s.get("label", f"场次{idx + 1}"),
+                    "speaker": "",
+                    "affiliation": "",
+                    "transcripts": [],
+                    "photos": photos,
+                    "n_photos": len(photos),
+                }
+            )
+    return dossier, []
+
+
+def main():
+    ap = argparse.ArgumentParser(description="拼装每场档案 talk_dossier.json（支持 Mode A / Mode B）")
+    ap.add_argument("--mode", choices=["auto", "a", "b"], default="auto", help="模式：auto（默认，有 --rec-map 走 B 否则走 A）、a、b")
+    ap.add_argument("--agenda", default="", help="agenda.json（Mode B 必需；Mode A 可选，用于填入确认后的主题结构）")
+    ap.add_argument("--rec-map", default="", help="rec_to_talk.json（Mode B 必需）")
+    ap.add_argument("--photo-map", required=True, help="photo_session_map.json（scan_media.py 产出）")
+    ap.add_argument("--timeline", required=True, help="timeline.json（scan_media.py 产出）")
+    ap.add_argument("--transcript-dir", default="record/transcript", help="转写稿目录（Mode B 使用）")
+    ap.add_argument("--transcript-suffix", default="_转写.md", help="转写稿后缀（默认 _转写.md）")
+    ap.add_argument("--ocr-dir", default="_work/ocr", help="OCR 结果目录（每张图 <stem>.md）")
+    ap.add_argument("--out", default="_work/talk_dossier.json", help="输出路径")
+    args = ap.parse_args()
+
+    mode = args.mode
+    if mode == "auto":
+        mode = "b" if args.rec_map else "a"
+
+    photo_map = json.loads(Path(args.photo_map).read_text(encoding="utf-8"))
+    timeline = json.loads(Path(args.timeline).read_text(encoding="utf-8"))
+    agenda = json.loads(Path(args.agenda).read_text(encoding="utf-8")) if args.agenda else None
+    ocr_dir = Path(args.ocr_dir)
+
+    if mode == "b":
+        if not args.agenda or not args.rec_map:
+            sys.exit("Mode B 必须同时提供 --agenda 和 --rec-map（仅照片请用 --mode a）")
+        rec_map = json.loads(Path(args.rec_map).read_text(encoding="utf-8"))
+        dossier, missing_tr = build_mode_b(
+            agenda, rec_map, photo_map, timeline, Path(args.transcript_dir), args.transcript_suffix, ocr_dir
+        )
+    else:
+        dossier, missing_tr = build_mode_a(agenda, photo_map, timeline, ocr_dir)
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(dossier, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"[build_dossier] 写出 {out}  共 {len(dossier)} 场", flush=True)
+    print(f"[build_dossier] 模式={mode.upper()}  写出 {out}  共 {len(dossier)} 场", flush=True)
     for d in dossier:
-        print(f"  {d['id']:14} {d['agenda_time']:14} spk={d['speaker']}  rec={len(d['transcripts'])} photos={d['n_photos']}", flush=True)
+        print(
+            f"  {d['id']:14} {d['agenda_time']:14} spk={d['speaker']}  rec={len(d['transcripts'])} photos={d['n_photos']}",
+            flush=True,
+        )
     if missing_tr:
-        print("[build_dossier] ⚠️ 缺失转写稿：", missing_tr, flush=True)
+        print("[build_dossier] 警告：缺失转写稿：", missing_tr, flush=True)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,15 @@
+{
+  "case": "tornado-sensitivity",
+  "kicker": "EXHIBIT 2",
+  "title": "敏感性排序:六个变量相对中点 20 的偏离",
+  "panel_title": "变量影响区间(两端值,中点 20)",
+  "purpose": "敏感性分析;找出对结果影响最大的变量",
+  "decision": "优先校验影响最大的两个变量",
+  "story": "Variable 6 的区间 4–36 偏离最大,Variable 1 的 19.5–20.5 几乎无影响。",
+  "questions": ["哪些变量影响最大?", "各变量的区间是多少?"],
+  "insights": [
+    ["最大影响", "Variable 6 的区间 4–36,偏离中点最远。"],
+    ["最小影响", "Variable 1 的 19.5–20.5,几乎无影响。"]
+  ],
+  "source": "示例数据与配方:Python Graph Gallery web-tornado-chart(0BSD)"
+}

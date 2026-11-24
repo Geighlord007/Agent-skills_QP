@@ -1,5 +1,24 @@
 # WIR Editing Reference
 
+## Quick Section Index (Progressive Disclosure — Jump by Line Range)
+
+Read **Engine Interface** + **1. WIR Overview** first, then jump only to the topic you need (e.g., **8. Comments and Revisions** or **7. Troubleshooting**) using line ranges.
+
+| Section | Lines |
+|---|---|
+| Engine Interface | L31–L103 |
+| 1. WIR Overview | L104–L179 |
+| 2. Opening a Document | L180–L201 |
+| 3. Reading WIR Windows | L202–L370 |
+| 4. Editing WIR Content | L371–L551 |
+| 5. Saving the Document | L552–L565 |
+| 6. WIR Editing Handbook | L566–L663 |
+| 7. Troubleshooting | L664–L761 |
+| 8. Comments and Revisions | L762–L891 |
+| Reference Entry Points | L892–L897 |
+
+---
+
 This document covers only **editing existing `.docx` files**. The public WIR workflow consists solely of:
 
 1. `open`
@@ -17,7 +36,7 @@ The engine is at `docx/scripts/engine/`. Before importing, add `docx/scripts/` t
 
 ```python
 import sys
-sys.path.insert(0, '<path-to>/docx/scripts')  # same directory as ./scripts/docx
+sys.path.insert(0, '<path-to>/docx/scripts')  # same directory as scripts/docx_cli.py
 from engine import WIRSession
 ```
 

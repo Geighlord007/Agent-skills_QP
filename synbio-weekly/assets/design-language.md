@@ -1,8 +1,8 @@
 # 报告设计语言 PAPER-INK EDITORIAL v1.0（纸墨编辑体）
 
-> **本文件是 synbio-weekly 技能包内置的完整设计规范，可独立使用。** 原作者另有跨行业母本存于其本地项目目录（不随包分发）；两者并存时修改须同步。
+> **本文件是 `synbio-weekly` 技能包内置的完整自包含设计规范。**
 > **定位**：所有 AI 生成报告/周报/简报的统一设计标准——换行业、换关键词，视觉标准不变。
-> **血统**：tokens 与图表语法取自 nice-baogao `styles/synbio-editorial`（生物风格，雕版技术感）；反 AI 套路原则取自 Geighlord007/frontend-slides（Anti-AI-Slop）；图表工作流取自 Lieflat Charts（数据契约先行、真实单位做视觉原子、每图一个结论）；生图风格 Skill 化取自《4 个视觉 Skill｜130 种 AI 图片风格大赏》（固定风格预设 + 主题编译提示词）。
+> **血统**：tokens 与图表语法源自自研 `synbio-editorial` 视觉体系（生物风格，雕版技术感，现已完全自包含固化于本文件）；反 AI 套路原则取自 Geighlord007/frontend-slides（Anti-AI-Slop）；图表工作流取自 Lieflat Charts（数据契约先行、真实单位做视觉原子、每图一个结论）；生图风格 Skill 化取自《4 个视觉 Skill｜130 种 AI 图片风格大赏》（固定风格预设 + 主题编译提示词）。
 > **原则**：写数字，不写形容词。本文出现的每个数值都是可执行的规范。
 
 ---
@@ -52,7 +52,7 @@
 
 ## 3. 字体与字阶
 
-### 3.1 四个字体槽（CSS font-family 栈照抄；拉丁与中文按槽独立回退）
+### 3.1 三个字体槽（CSS font-family 栈照抄；拉丁与中文按槽独立回退）
 
 ```
 --font-serif: "Newsreader","Georgia","Times New Roman","Songti SC","SimSun",serif;        ← 标题/正文/斜体批注
@@ -60,7 +60,7 @@
 --font-mono:  "DM Mono","Consolas","SFMono-Regular",monospace;                            ← 数字/kicker/微标签/来源行
 ```
 
-**三款拉丁面随技能包 `assets/fonts/` 分发**（latin 子集 woff2，SIL OFL，授权见同目录 OFL.txt），生成 HTML 时内联为 data URI——跨机渲染一致。CJK 面继续走系统回退栈（Songti SC/SimSun/PingFang SC/Microsoft YaHei），不内嵌。
+**三款拉丁面随技能包 `assets/fonts/` 分发**（latin 子集 woff2，SIL OFL，授权见同目录 OFL.txt），`embed-images.mjs` 运行时自动从技能包内联为 data URI——跨机渲染一致。CJK 面继续走系统回退栈（Songti SC/SimSun/PingFang SC/Microsoft YaHei），不内嵌。
 
 ### 3.2 用法（face-per-element，照 synbio-editorial C8.2）
 
@@ -123,8 +123,8 @@
 
 | 形态 | 用途 | 构造 |
 |---|---|---|
-| **横条图（Glance 档）** | 金额、数量对比 | 粗条（28px），降序排列，值标签 mono 打在条右；一根 `CLAY` 高亮=主角；无坐标轴框 |
-| **分布条形** | 构成/分类计数 | 同上但条更细（18px），分类标签右对齐 mono |
+| **横条图（Glance 档）** | 金额、数量对比 | 模板默认 22px（Glance 强调档可用 28px），降序排列，值标签 mono 打在条右；一根 `CLAY` 高亮=主角；无坐标轴框 |
+| **分布条形** | 构成/分类计数 | 同上但条更细（18px–22px），分类标签右对齐 mono |
 | **时间轴** | 事件流 | 一条 `INK` 横线即轴，`ROSE` 实心点标事件，标签上下交错，mono 日期 |
 | **表格** | GRAS/多字段清单 | 仅横向发丝线（表头下 0.9 权重、行线 0.45），无竖线无斑马纹；表头 `BONE` 带 + mono uppercase |
 
@@ -147,7 +147,7 @@
 [fields]    mono 微标签 + sans/serif 正文：
             PROFILE · 公司是谁（成立地/背景/阶段一句话起）
             TECH    · 技术是什么（外行能懂的解释）
-            TERMS   · 交易/条款细节（金额/轮次/投资方/用途/合作条款）
+            TERMS   · 交易/条款细节（金额/轮次/投资方/用途/条款）
             WHY     · 为什么重要（仅 KEY 档）
 [source]    Source: <站名> · Retrieved YYYY-MM-DD（+ 链接）
 ```
@@ -175,6 +175,6 @@
 
 - 本规范跨行业复用：换行业只换内容与主题物意象，**tokens、字阶、家具、图表语法、双语规则一字不改**。
 - 任何偏离记录到该报告的生成说明里（哪一条、为什么）；累计偏离 ≥3 条时升版本修订规范，而不是让报告继续漂移。
-- 参考资产：nice-baogao `styles/synbio-editorial/STYLE.md`（tokens/图表/禁用清单原文）、frontend-slides（Anti-AI-Slop 宣言与编辑体模板谱系）、Lieflat Charts（图表三档风格与整页双语模板工作流）、wibi-style/Phil-design-skills 等生图风格 Skill 包（风格预设组织方式）。
+- 参考谱系：`synbio-editorial`（tokens/图表/禁用清单原文，已完整内化至本文件）、frontend-slides（Anti-AI-Slop 宣言与编辑体模板谱系）、Lieflat Charts（图表三档风格与整页双语模板工作流）、wibi-style/Phil-design-skills 等生图风格 Skill 包（风格预设组织方式）。
 
-*v1.0 · 2026-09-24 固化。维护：改规范先改母本，再同步本副本。*
+*v1.0 · 2026-09-24 固化。*

@@ -1,7 +1,7 @@
 {
   "_meta": {
     "name": "合成生物行业周简报",
-    "version": "2.1",
+    "version": "2.2",
     "language": "zh-CN + EN 双语（主语言中文，英文成对从属）",
     "window_days": 10,
     "window_note": "滚动窗口：每次生成覆盖『今天往前 window_days 天』，配合 data/state.json 去重。10 天兜住新闻稀疏与边缘日期漏报，去重保证不重复。",
@@ -54,10 +54,10 @@
     "Ginkgo Bioworks", "Amyris", "Perfect Day", "The EVERY Company", "Motif FoodWorks",
     "Solar Foods", "Calysta", "Debut Biotech", "Conagen", "EnginZyme", "Omeat", "Robigo",
     "Sable Fermentation", "Ferm Labs", "Bestzyme", "GenScript", "MycoTechnology", "Novonesis",
-    "DSM-Firmenich", "dsm-firmenich", "DSM Food Specialties", "IFF", "Codexis", "Twist Bioscience",
+    "DSM-Firmenich", "DSM Food Specialties", "IFF", "Codexis", "Twist Bioscience",
     "Antheia", "Inscripta", "StrainX Bioworks", "baCta", "ÄIO", "Onego Bio", "Vivici",
-    "New Culture", "Change Foods", "Those Vegan Cowboys", "Plantible Foods", "Calyxt",
-    "Evonik", "BASF", "Saku Biosciences", "React Foods", "Tempus"
+    "New Culture", "Change Foods", "Those Vegan Cowboys", "Plantible Foods", "Cibus",
+    "Evonik", "BASF", "Saku Biosciences", "React Foods"
   ],
 
   "sources": [
@@ -170,8 +170,14 @@
     "fda_other": {
       "enabled": true,
       "items": {
-        "FCN 食品接触通报": "https://hfpappexternal.fda.gov/scripts/fdcc/index.cfm?set=FCN（set=FCN 已确认）",
-        "NDI 新膳食成分通告": "https://www.fda.gov/food/dietary-supplement-products-ingredients/ndi-75-day-notifications（站内检索每周新增）"
+        "FCN 食品接触通报": {
+          "url": "https://hfpappexternal.fda.gov/scripts/fdcc/index.cfm?set=FCN",
+          "note": "set=FCN 已确认"
+        },
+        "NDI 新膳食成分通告": {
+          "url": "https://www.fda.gov/food/dietary-supplement-products-ingredients/ndi-75-day-notifications",
+          "note": "站内检索每周新增"
+        }
       },
       "method": "复用 GRAS 的『编号增量差集法』"
     },

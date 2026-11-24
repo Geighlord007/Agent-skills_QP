@@ -5,7 +5,7 @@
   2) 条形图宽度 = 数值 ÷ 该图最大值 × 100%（取整）；恰好一根 .subj（CLAY）= 编辑判断的主角
   3) 双语堆叠：中文行 + 紧随灰色英文行，一行内不中英混排
   4) 每条目必带 source 行；空栏目写「本期无」
-  5) 写完后运行 node scripts/embed-images.mjs 本文件内联封面图
+  5) 写完后运行 node scripts/embed-images.mjs 本文件内联封面图与字体；若本期无封面图，整块删除 .cover-box 与 .cover-cap
 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -39,7 +39,7 @@
   .title-en { font-family:var(--serif); font-style:italic; font-size:15px; color:var(--muted); margin-top:6px; }
   .headrule { border:none; border-top:1px solid var(--rule); opacity:.55; margin:18px 0; }
   .deck { font-family:var(--serif); font-style:italic; font-size:15.5px; color:var(--ink2); margin-bottom:8px; }
-  .deck-en { font-family:var(--serif); font-style:italic; font-size:13px; color:var(--muted); margin-bottom:26px; }
+  header .deck-en { font-family:var(--serif); font-style:italic; font-size:13px; color:var(--muted); margin-bottom:26px; }
 
   /* ── 封面图 ── */
   .cover-box { border:1px solid var(--ink); border-top:3px solid var(--clay); margin-bottom:8px; }
@@ -82,7 +82,7 @@
   .chip.wl { background:var(--jpm-bronze); }
   .chip.reg { background:var(--jpm-ink); }
   .claim { font-family:var(--sans); font-size:16px; line-height:1.6; margin-bottom:4px; }
-  .deck-en { font-family:var(--serif); font-style:italic; font-size:13px; color:var(--muted); line-height:1.6; margin-bottom:10px; }
+  .item .deck-en { font-family:var(--serif); font-style:italic; font-size:13px; color:var(--muted); line-height:1.6; margin-bottom:10px; }
   .field { margin-bottom:8px; font-family:var(--sans); font-size:14.5px; line-height:1.75; color:var(--ink2); }
   .field .fl { display:block; margin-bottom:2px; }
   .src { font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:10px; }
@@ -97,6 +97,8 @@
   .chart .label { width:132px; flex:none; text-align:right; font-family:var(--mono); font-size:11.5px; color:var(--muted); }
   .chart .barwrap { flex:1; display:flex; align-items:center; }
   .chart .bar { height:22px; background:var(--meadow); flex:none; }
+  .chart.glance .bar { height:28px; }
+  .chart.dist .bar { height:18px; }
   .chart .bar.subj { background:var(--clay); }
   .chart .val { margin-left:8px; font-family:var(--mono); font-size:12.5px; color:var(--ink); }
   .chart-note { font-family:var(--serif); font-style:italic; font-size:12px; color:var(--muted); margin-top:8px; }

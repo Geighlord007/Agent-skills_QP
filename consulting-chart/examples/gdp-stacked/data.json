@@ -1,0 +1,8 @@
+{
+  "snapshots": {
+    "2022": {"Paris": 108.61, "Zurich": 106.88, "Vienna": 120.98, "Amsterdam": 106.32, "Brussels": 97.53, "Stockholm": 103.75, "Lisbon": 95.09, "Prague": 92.98, "Copenhagen": 116.07},
+    "2023": {"Paris": 121.81, "Zurich": 112.85, "Vienna": 132.81, "Amsterdam": 106.22, "Brussels": 98.17, "Stockholm": 101.37, "Lisbon": 97.10, "Prague": 90.77, "Copenhagen": 116.10},
+    "2024": {"Paris": 129.46, "Zurich": 111.53, "Vienna": 103.93, "Amsterdam": 106.90, "Brussels": 111.09, "Stockholm": 107.34, "Lisbon": 96.41, "Prague": 100.58, "Copenhagen": 127.83},
+    "2025": {"Paris": 133.52, "Zurich": 126.31, "Vienna": 121.46, "Amsterdam": 108.53, "Brussels": 109.75, "Stockholm": 124.18, "Lisbon": 106.32, "Prague": 100.58, "Copenhagen": 124.33}
+  }
+}

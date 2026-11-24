@@ -1,0 +1,9 @@
+{
+  "waffle": true,
+  "cells": 100,
+  "parts": [
+    {"name": "Daily use", "value": 45},
+    {"name": "Piloting", "value": 30},
+    {"name": "Planning", "value": 25}
+  ]
+}

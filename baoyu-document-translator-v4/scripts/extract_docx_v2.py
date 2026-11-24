@@ -113,12 +113,10 @@ def para_runs(para):
 
 def extract_paragraph(para, key_prefix, story, index, doc=None):
     """Extract a paragraph element; returns dict or None if empty."""
-    text = para.text.strip()
-    if not text:
-        return None
-
     runs = para_runs(para)
     parts = [r.text for r in runs]
+    if not "".join(parts).strip():
+        return None
 
     elem = {
         "key": f"{key_prefix}{index}",
@@ -160,12 +158,10 @@ def extract_table(table, key_prefix, story, table_index):
                 continue
             seen.add(tc)
 
-            cell_text = cell.text.strip()
-            if not cell_text:
-                continue
-
             all_runs = [r for para in cell.paragraphs for r in para_runs(para)]
             parts = [r.text for r in all_runs]
+            if not "".join(parts).strip():
+                continue
             # paragraph boundaries inside the cell (cumulative run counts) so merge can
             # keep multi-paragraph cells' line breaks aligned; `text` joins paragraph
             # texts with \n so translators see the paragraph structure
@@ -299,7 +295,7 @@ def extract_footnotes_endnotes(docx_path):
                                 "table": table_index,
                                 "row": ri,
                                 "col": ci,
-                                "runs": len(cell_runs),
+                                "runs": len(cell_texts),
                                 "text": cell_full,
                                 "parts": cell_texts,
                             })
@@ -364,9 +360,9 @@ def extract_docx(docx_path, out_path=None):
             for ri, tr_el in enumerate(tbl.findall(qn("w:tr"))):
                 seen_tc, ci = set(), 0
                 for tc in tr_el.findall(qn("w:tc")):
-                    if id(tc) in seen_tc:
+                    if tc in seen_tc:
                         continue
-                    seen_tc.add(id(tc))
+                    seen_tc.add(tc)
                     parts = []
                     for p in tc.findall(".//" + qn("w:p")):
                         parts.extend(r.text for r in para_runs(Paragraph(p, doc)))
@@ -404,9 +400,9 @@ def extract_docx(docx_path, out_path=None):
     # paragraphs inside SDT content controls (body level)
     seen_sdt = set()
     for idx, sdt in enumerate(body_elem.findall(".//" + qn("w:sdt"))):
-        if id(sdt) in seen_sdt:
+        if sdt in seen_sdt:
             continue
-        seen_sdt.add(id(sdt))
+        seen_sdt.add(sdt)
         pi = 0
         for p in sdt.findall(".//" + qn("w:p")):
             para = Paragraph(p, doc)
@@ -420,9 +416,6 @@ def extract_docx(docx_path, out_path=None):
     if fn_elements:
         stories.extend(sorted({e["story"] for e in fn_elements}))
         elements.extend(fn_elements)
-
-    # TODO: text boxes / shapes in body and headers/footers
-    # These require parsing w:drawing / w:pict / mc:AlternateContent elements.
 
     result = {
         "file_type": "docx",

@@ -1,0 +1,62 @@
+{
+  "type": "scenario_compare",
+  "title": "三情景对比:Scenario 3 规模与 EBITDA 最高,毛利率保持稳定",
+  "panel_title": "情景对比(US$ M)",
+  "metrics": [
+    "Revenue",
+    "COGS",
+    "Gross Profit",
+    "OPEX",
+    "EBITDA"
+  ],
+  "series": [
+    {
+      "name": "Scenario 1",
+      "values": [
+        115,
+        56,
+        59,
+        37,
+        22
+      ]
+    },
+    {
+      "name": "Scenario 2",
+      "values": [
+        125,
+        60,
+        65,
+        43,
+        22
+      ]
+    },
+    {
+      "name": "Scenario 3",
+      "values": [
+        132,
+        64,
+        68,
+        41,
+        27
+      ]
+    }
+  ],
+  "insights": [
+    [
+      "Scenario 3 双高",
+      "收入 132、EBITDA 27,均为三情景最高。"
+    ],
+    [
+      "毛利率稳定",
+      "51%、52%、52%,收入增长未牺牲毛利率。"
+    ],
+    [
+      "OPEX 抵消",
+      "Scenario 2 的 OPEX 43 为最高,毛利增量 6 被完全抵消,EBITDA 与 Scenario 1 持平 22。"
+    ]
+  ],
+  "note": "单位 US$ M;Gross Profit = Revenue − COGS;EBITDA = Gross Profit − OPEX。",
+  "source": "示例数据(情景对比用例)",
+  "_kind": "scenarios",
+  "kicker": null
+}

@@ -1,0 +1,54 @@
+{
+  "type": "flow_map",
+  "title": "AI 人才流向:印度与中国流向美国为主",
+  "panel_title": "AI 人才流动(人数,2025)",
+  "flows": [
+    {
+      "from": "IND",
+      "to": "USA",
+      "value": 120
+    },
+    {
+      "from": "CHN",
+      "to": "USA",
+      "value": 90
+    },
+    {
+      "from": "GBR",
+      "to": "USA",
+      "value": 45
+    },
+    {
+      "from": "IND",
+      "to": "GBR",
+      "value": 35
+    },
+    {
+      "from": "DEU",
+      "to": "CAN",
+      "value": 30
+    },
+    {
+      "from": "BRA",
+      "to": "USA",
+      "value": 25
+    }
+  ],
+  "insights": [
+    [
+      "最大流向",
+      "IND → USA,120 人。"
+    ],
+    [
+      "第二流向",
+      "CHN → USA,90 人。"
+    ],
+    [
+      "欧洲支线",
+      "GBR → USA 45 人;DEU → CAN 30 人。"
+    ]
+  ],
+  "source": "示例数据(流向地图用例);国界:Natural Earth 110m(公有领域)",
+  "_kind": "flow_map",
+  "kicker": null
+}

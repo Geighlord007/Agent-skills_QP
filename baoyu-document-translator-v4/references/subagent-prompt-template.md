@@ -1,138 +1,85 @@
-# Subagent Prompt Template (v3)
+# Subagent Prompt Template (v4.3)
 
-两套角色：V4 PPTX 流程的角色（Part 5–7，任务书由 `build_dispatch.py` 生成，内容随任务书下发）
-与 DOCX 分块流程的角色（Part 1–4，共享上下文 `02-prompt.md`）。两套都遵守同一份效率纪律。
+覆盖双模式子代理角色：**Mode A（DOCX / 纯文本分块，Part 1–4）** 与 **Mode B（PPTX 整页视觉，Part 5–7）**。
 
-**效率纪律（三个角色都必须遵守）**：
-- 每个文件只读一遍。读完立即开始产出，禁止为"核对"反复重读同一文件；核对交给脚本。
-- **工具回合上限**：翻译 ≤ 4 次（三次读取 + 一次写入）、审校 ≤ 8 次、逐页抽查 ≤ 6 次。
-  超出上限前必须完成产出；回合数决定墙钟时间，禁止用工具调用代替思考。
-- 机械核对（标记完整性、行数与空行结构、数字词元一致性、违禁字扫描）一律不查，由
-  `qa_v3.py` 统一阻断把关。子代理只对语义与表达负责。
-- 产出直接写目标文件，回复只报结论（块号、条目数、问题条数），禁止在回复里复述内容。
+## 共享契约（所有角色通用）
 
-## Part 1 — 共享上下文（`02-prompt.md`，每个子代理先读）
+- **分工边界**：子代理只对语义、语域、术语与表达负责；标记完整性、行数结构、数字词元一致性等机械核对统一交 `qa_v3.py` 阻断把关，不在子代理内反复自查。
+- **简洁汇报**：产出直接写入目标文件，回复只报块/组号、条目数与存疑点，不复述译文全文。
+- **精确 run 切分规则（仅审校与统一阶段针对 `runs > 1` 且含强调/分段的元素）**：
+  1. 强调 run（粗体/斜体/颜色/字号突出）承载源文对应强调短语的译文；
+  2. 换行归属不跨段（与源 run 分段边界对齐）；
+  3. 数值词元完整落在单个 run 内，不拆断数字；
+  4. `parts` 拼接与修订后译文逐字一致（仅允许空白差异）；单 run 或无需精调的元素不写入 `splits`。
 
+---
+
+## Mode A — 原生子代理 + 纯文本分块（DOCX 默认 / PPTX 轻量）
+
+### Part 1 — 共享上下文（`02-prompt.md`）
+
+```markdown
 You are a professional {source_lang}→{target_lang} translator specializing in {domain}.
-This document is translated in parallel chunks; consistency comes from this file — follow it exactly.
+This document is translated in parallel chunks; follow this spec strictly for cross-chunk consistency.
 
-- Style: {style} | Audience: {audience} | Register: {register_notes}
-- 术语表（authoritative — never deviate）:
-  {glossary_table}
-- 缩写释义（来自 01-context.md 的语境推断，附依据）:
-  {abbreviation_resolutions}
-- 保留英文清单（公司名、产品名、蛋白缩写、邮箱、模型名等）:
-  {verbatim_list}
-- 数字与金额写法（来自规格单）:
-  {number_style_notes}
-- 页面语境（每部分语域与句式，来自 01-context.md）:
-  {register_by_section}
-
-### I/O contract（keyed markdown）
-
-每个块形如：
-
-```
-<!--key:p_body_21|runs:3|type:paragraph-->
-译文
+- Style / Audience / Register: {style} | {audience} | {register_notes}
+- 术语表（authoritative）: {glossary_table}
+- 缩写释义（来自 01-context.md，附依据）: {abbreviation_resolutions}
+- 保留英文清单（公司/产品/模型/人名/邮箱等）: {verbatim_list}
+- 数字与金额写法: {number_style_notes}
+- 分节语境: {register_by_section}
 ```
 
-1. Preserve every `<!--key:...-->` marker line byte-for-byte; never delete/reorder/edit.
-2. Same block count and order as your chunk source; blank line between blocks.
-3. Empty source block → marker + nothing.
-4. Keep tabs and page numbers in TOC-style lines (`Title\t12`); never renumber pages.
-5. Text already in {target_lang} in source stays verbatim.
-6. Table cells are fragments: translate as fragments, keep internal line breaks.
-7. **译文以完整自然的目标语言句子为先**：不要为了对上 run 数量或格式边界而调整语序与措辞；
-   run 切分在审校阶段由审校子代理按 `chunk-NN-runs.json` 处理。
-8. 数值不得改动；书写形式按规格单处理（如 million/billion 换算为 万/亿），形式转换处
-   在译文中如实写出即可，白名单由主代理统一登记。
-9. 缩写按 01-context.md 的释义处理；规格单未覆盖、语境又判定不了的缩写保留原文并记入待确认清单。
-10. Do not add commentary outside blocks.
+**Keyed Markdown I/O 规则**：
+1. 逐字节保留每个 `<!--key:...-->` 标记行，块数与顺序不变，块间空一行；空源块保持「标记行 + 空内容」。
+2. 保留目录行的制表符与页码（`Title\t12`），不改页码；表格单元格按短语翻译并保留内部换行；源文中已是目标语言的内容原样保留。
+3. 以自然流畅的目标语言为先，不要为迁就 run 数量扭曲语序（run 切分在审校阶段处理）。
+4. 数值不得改动；按规格单做书写形式换算（如 `million` → `万`）时直接写出，由主代理登记白名单。
+5. 块外不加解释性文字。
 
-## Part 2 — 翻译子代理任务块
+### Part 2 — 翻译子代理（Chunk `{i}` / `{n}`）
 
-Chunk {i} of {n}. Position in argument: {position_note}.
+- 读取 `01-context.md`、`02-prompt.md` 与 `chunks/chunk-{i:02d}-source.md`。
+- 按 I/O 规则写出 `chunks/chunk-{i:02d}-draft.md`（UTF-8）。
+- 仅做语义自查（数值无误、缩写按释义、表达自然无翻译腔），回复块号、块数及待确认词条。
 
-1. Read `02-prompt.md`, then `chunks/chunk-{i:02d}-source.md`（各只读一遍，共 3 次读取含 01-context.md）。
-2. Translate every block per the I/O contract.
-3. Write `chunks/chunk-{i:02d}-draft.md` (UTF-8, nothing else).
-4. 只做语义自查：数值无改动、缩写按释义、表达自然无翻译腔。其余核对交给 qa_v3。
-5. Reply: chunk id, block count, uncertain terms with chosen rendering.
+### Part 3 — 独立审校子代理（未参与该块翻译）
 
-## Part 3 — 审校子代理任务块（每块一个，由未翻译该块的子代理执行）
+- 对照 `chunks/chunk-{i:02d}-source.md`、`chunks/chunk-{i:02d}-draft.md`、`02-prompt.md` 及 `chunks/chunk-{i:02d}-runs.json`（由 `chunk_keyed.py --extracted extracted.json` 生成）。
+- 审校重点：分节语域、缩写处置、保留英文清单（误译同样算错）、术语一致、数值准确、表达自然度（折行标题需整体理解后重排）。
+- 直接写出两份产物：
+  1. 若发现问题，直接原地修订 `chunks/chunk-{i:02d}-draft.md`（无问题不动文件）；
+  2. 写出 `chunks/chunk-{i:02d}-splits.json`（`{key: [part1, ...]}`，遵循顶部「精确 run 切分规则」）。
 
-Review target: `chunks/chunk-{i:02d}-draft.md`，对照 `chunks/chunk-{i:02d}-source.md` 与 `02-prompt.md`
-（各只读一遍），run 结构读 `chunks/chunk-{i:02d}-runs.json`。
+### Part 4 — 逐页抽查子代理（审校后按页并行）
 
-**审校范围（只查语义与表达，机械项不查）**：
-1. 语域贴合页面语境：团队页、设施页、财务页各自句式与用词习惯是否到位。
-2. 缩写处理：是否按 01-context.md 的释义展开或保留。
-3. 保留英文清单逐项核对（人名、公司名、模型名、融资阶段名等）：清单里的项必须保留英文原样，
-   译成中文同样是错误；跨区块出现两种写法时按清单统一。
-4. 术语一致性：是否与术语表一致，同一概念在区块内有无变体。
-5. 数值：数值是否被改动（只看数值本身）。
-6. 表达质量：翻译腔、搭配不当、语义弱化或走样、标题被切成不相干的词（同一标题的折行必须整体理解后按行重排）。
+- 读取 `pages/page-NN.txt`（由 `page_compare.py` 生成的 `SRC |` / `TGT |` 对照）与页面→块归属表。
+- 重点排查整页漏译/误译/跨块术语不一致；发现问题直接修入对应 `chunks/chunk-NN-draft.md`，涉及多 run 元素同步更新 `chunks/chunk-NN-splits.json`。
+- 主代理合并各块 splits → `run_splits.json`，拼接各块 draft → `translation.md`，统一跨块用词后进入 `merge_v3.py`。
 
-**产出（两份，直接写文件，不是问题清单）**：
-1. `chunks/chunk-{i:02d}-draft.md` — 发现问题直接在译文中改好，覆盖原文件；
-   没有问题就不要动它。
-2. `chunks/chunk-{i:02d}-splits.json` — 本块多 run 元素的精确 run 切分：
-   `{key: [part1, part2, ...]}`，规则：
-   - 强调 run（粗体/斜体/颜色）承载源文对应强调短语的译文；
-   - 换行位置与源文一致（源 run 分段对应的译文行归属不跨段）；
-   - 数值词元完整落在单个 run 内，禁止把数字截断到两个 run；
-   - 每个元素的 parts 拼接与译文逐字一致（仅允许空白差异）；
-   - 单 run 元素与无需调整的元素不写入。
-3. Reply: chunk id, 修订条数, 争议点。
+---
 
-## Part 4 — 逐页抽查子代理（审校完成后，按页并行）
+## Mode B — 整页视觉子代理（PPTX 无外部 API Key 替代路线）
 
-输入：`pages/page-NN.txt`（逐元素 EN/ZH 对照，由 `page_compare.py` 生成）与页面归属表
-（page → chunk 文件）。抽查是审校后的第二双眼睛，重点看审校容易漏的整页效果。
+任务书均由 `build_dispatch.py` 预打包（内联规格、源块、run 元信息、OCR 登记与页面图绝对路径）。
 
-1. 逐页检查：译文准确完整（无误译/漏译/添译）、中文自然、缩写与专名按 01-context.md 处理、
-   数字与金额准确、术语与全篇一致、页面语域贴合。
-2. 发现问题**直接修入所属 `chunks/chunk-NN-draft.md`**（保持标记行与行数结构原样），
-   若改动了多 run 元素，同步更新该块 `chunks/chunk-NN-splits.json`（切分规则同 Part 3）。
-3. 没有问题的页不要动文件。
-4. Reply: 检查页号、修订条数。禁止复述译文。
+### Part 5 — 视觉翻译子代理
 
-主代理汇总 splits 文件成 `run_splits.json`（key 去重合并），汇总各块 draft 成 `translation.md`，
-做跨区块用词统一后进入合并。
+- 读取 `groups/dispatch-tr-NN.md` 及本组全部页面图，写出 `groups/draft-NN.md`。
+- 页面图用于把握版面空间与语境（当场取舍措辞长度）；图内烘焙文字不回写，只翻译标记块。
 
-## Part 5 — V4 翻译子代理（整页视觉）
+### Part 6 — 补丁审校子代理（未参与该组翻译）
 
-任务书：`build_dispatch.py translate` 生成的 `groups/dispatch-tr-NN.md`（含规格、源块、
-run 元信息、图内文字登记、页面图绝对路径）。
+- 读取 `groups/dispatch-rv-NN.md`，产出严格 JSON `groups/patches-NN.json`：
+  ```json
+  {"patches": [{"key": "...", "text": "整块修订后译文"}], "splits": {"key": ["part1", "part2"]}, "notes": ["..."]}
+  ```
+- `splits` 遵循顶部「精确 run 切分规则」；**补丁改动多 run 元素时必须在同一文件内同步给出新 `splits`**。无问题写 `{"patches": [], "splits": {}, "notes": []}`。
 
-- 回合纪律：第一回合并行读任务书与全部页面图，第二回合写 `groups/draft-NN.md`，上限 2 回合。
-- 页面图只作语境：图内文字不回写，翻译范围只有标记块；译文在图上当场取舍措辞与长度。
-- 草稿文件必须是新文件：主代理派发前清空旧 `draft-NN.md`（Write 工具对已存在文件要求先 Read，
-  白白多花一个回合）。
-- 回复只报块数与存疑项，禁止复述译文。
+### Part 7 — 终稿视觉核对子代理
 
-## Part 6 — V4 审校子代理（补丁直出）
-
-任务书：`groups/dispatch-rv-NN.md`（含规格、源块、译文块、run 元信息），未参与该组翻译。
-产出 `groups/patches-NN.json`（严格 JSON）：
-
-```
-{"patches": [{"key": "…", "text": "整块修订后译文"}], "splits": {"key": ["part1", "part2"]}, "notes": ["…"]}
-```
-
-splits 只写 runs>1 的元素：强调 run 承载对应强调短语译文；换行不跨段；数值词元完整落单 part；
-parts 拼接与修订后译文逐字一致（仅空白差异）；单 run 元素不写。**补丁改动了多 run 元素时，
-必须在同一个补丁文件里给出该 key 的新 splits**，旧切分不会自动跟随文本。没有问题写
-`{"patches": [], "splits": {}, "notes": []}`。工具回合上限 2。回复只报修订条数与争议点。
-
-## Part 7 — V4 视觉核对子代理
-
-任务书：`groups/dispatch-vs-NN.md`（含译文块、源块、终稿页面图绝对路径）。
-第一回合并行读任务书与页面图，第二回合写 `groups/issues-NN.json`（严格 JSON）：
-
-```
-{"issues": [{"page": N, "key": "…或 null", "kind": "漏译|误译|溢出|重叠|截断|数字", "detail": "…"}]}
-```
-
-图内文字保留源语言属于既定政策，不算问题。工具回合上限 2。回复只报检查页号与问题条数。
+- 读取 `groups/dispatch-vs-NN.md` 及终稿页面图，产出严格 JSON `groups/issues-NN.json`：
+  ```json
+  {"issues": [{"page": 1, "key": "...或 null", "kind": "漏译|误译|溢出|重叠|截断|数字", "detail": "..."}]}
+  ```
+- 图内烘焙文字保留源语言属于既定政策，不算问题。

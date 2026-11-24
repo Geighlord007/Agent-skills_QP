@@ -1,21 +1,29 @@
 """
 File Optimizer for PaddleOCR Document Parsing
 
-Compresses and optimizes large files to meet size requirements.
-Supports image files only.
+Compresses and optimizes large image files to meet size requirements,
+preserving EXIF orientation and safely converting color modes.
 
 Usage:
-    python scripts/optimize_file.py input.png output.png
-    python scripts/optimize_file.py input.png output.jpg --quality 70
+    python optimize_file.py input.png output.jpg --quality 85
+    python optimize_file.py input.tif output.jpg --target-size 10
 """
 
 import argparse
 import math
+import os
 import sys
+import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+
+from lib import configure_stdio_utf8
+
+configure_stdio_utf8()
+
 DEFAULT_QUALITY = 85
-DEFAULT_TARGET_SIZE_MB = 20
+DEFAULT_TARGET_SIZE_MB = 20.0
 SUPPORTED_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp")
 SUPPORTED_FORMATS_DISPLAY = ", ".join(
     e.lstrip(".").upper() for e in SUPPORTED_EXTENSIONS
@@ -38,51 +46,104 @@ def _arg_positive_mb(value: str) -> float:
     return v
 
 
+def _normalize_to_8bit_l(img):
+    """Safely normalize 16-bit / integer / float grayscale images to 8-bit 'L'."""
+    extrema = img.getextrema()
+    if isinstance(extrema, tuple) and len(extrema) == 2:
+        lo, hi = extrema
+        if hi > lo:
+            scale = 255.0 / (hi - lo)
+            return img.point(lambda px: int((px - lo) * scale)).convert("L")
+    return img.convert("L")
+
+
+def _prepare_image_mode(img, output_suffix: str):
+    """Convert any PIL image mode into a mode safe for the target output format."""
+    from PIL import Image
+
+    suffix = output_suffix.lower()
+    no_alpha_format = suffix in (".jpg", ".jpeg", ".bmp")
+
+    if img.mode.startswith("I") or img.mode == "F":
+        img = _normalize_to_8bit_l(img)
+
+    if no_alpha_format:
+        if img.mode in ("RGBA", "LA", "PA") or (
+            img.mode == "P" and "transparency" in img.info
+        ):
+            rgba = img.convert("RGBA")
+            background = Image.new("RGB", rgba.size, (255, 255, 255))
+            background.paste(rgba, mask=rgba.split()[-1])
+            return background
+        if img.mode not in ("RGB", "L"):
+            return img.convert("RGB")
+        return img
+
+    # Formats supporting alpha (PNG, WebP, TIFF)
+    if img.mode == "PA":
+        return img.convert("RGBA")
+    if img.mode not in ("RGB", "RGBA", "L", "LA", "P", "1"):
+        return img.convert("RGB")
+    return img
+
+
+def _atomic_save(image, output_path: Path, save_kwargs: dict) -> float:
+    """Save image atomically via a sibling temp file to prevent in-place corruption."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{output_path.stem}_",
+        suffix=output_path.suffix or ".tmp",
+        dir=str(output_path.parent),
+    )
+    os.close(fd)
+    tmp_path = Path(tmp_name)
+    try:
+        image.save(tmp_path, **save_kwargs)
+        size_mb = tmp_path.stat().st_size / (1024 * 1024)
+        os.replace(tmp_path, output_path)
+        return size_mb
+    except Exception:
+        if tmp_path.exists():
+            tmp_path.unlink(missing_ok=True)
+        raise
+
+
 def optimize_image(
     input_path: Path,
     output_path: Path,
     quality: int = DEFAULT_QUALITY,
     max_size_mb: float = DEFAULT_TARGET_SIZE_MB,
 ) -> None:
-    """Optimize image file by reducing quality and/or resolution."""
+    """Optimize image file by applying EXIF orientation, converting mode, and resizing."""
     try:
-        from PIL import Image
+        from PIL import Image, ImageOps
     except ImportError:
-        print("ERROR: Pillow not installed")
-        print("Install with: pip install Pillow")
+        print("ERROR: Pillow not installed. Install with: pip install Pillow", file=sys.stderr)
         sys.exit(1)
 
     if input_path.stat().st_size == 0:
         raise ValueError("Input file is empty (0 bytes); nothing to optimize")
 
+    original_size = input_path.stat().st_size / (1024 * 1024)
     print(f"Optimizing image: {input_path}")
-
-    img = Image.open(input_path)
-    original_size = input_path.stat().st_size / 1024 / 1024
-
     print(f"Original size: {original_size:.2f}MB")
-    print(f"Original dimensions: {img.size[0]}x{img.size[1]}")
 
-    is_jpeg = output_path.suffix.lower() in (".jpg", ".jpeg")
+    # Open, transpose EXIF orientation, and copy into memory so the file handle closes
+    # cleanly before writing (critical for Windows in-place overwrite).
+    with Image.open(input_path) as raw_img:
+        transposed = ImageOps.exif_transpose(raw_img)
+        img = transposed.copy()
 
-    if is_jpeg and img.mode in ("RGBA", "LA", "P"):
-        background = Image.new("RGB", img.size, (255, 255, 255))
-        if img.mode == "P":
-            img = img.convert("RGBA")
-        background.paste(
-            img, mask=img.split()[-1] if img.mode in ("RGBA", "LA") else None
-        )
-        img = background
+    print(f"Dimensions (EXIF-normalized): {img.size[0]}x{img.size[1]} (mode={img.mode})")
 
-    save_kwargs = {"optimize": True}
-    if is_jpeg or output_path.suffix.lower() == ".webp":
+    img = _prepare_image_mode(img, output_path.suffix)
+
+    suffix = output_path.suffix.lower()
+    save_kwargs: dict = {"optimize": True}
+    if suffix in (".jpg", ".jpeg", ".webp"):
         save_kwargs["quality"] = quality
 
-    def _save(image):
-        image.save(output_path, **save_kwargs)
-        return output_path.stat().st_size / 1024 / 1024
-
-    new_size = _save(img)
+    new_size = _atomic_save(img, output_path, save_kwargs)
 
     scale_factor = 0.9
     while new_size > max_size_mb and scale_factor >= 0.4:
@@ -96,10 +157,8 @@ def optimize_image(
             break
 
         print(f"Resizing to {new_width}x{new_height} (scale: {scale_factor:.2f})")
-
         resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-        new_size = _save(resized)
-
+        new_size = _atomic_save(resized, output_path, save_kwargs)
         scale_factor -= 0.1
 
     print(f"Optimized size: {new_size:.2f}MB")
@@ -107,32 +166,26 @@ def optimize_image(
     print(f"Reduction: {pct:.1f}%")
 
     if new_size > max_size_mb:
-        print(f"\nWARNING: File still larger than {max_size_mb}MB")
-        print("Consider:")
-        print("  - Lower quality (--quality 70)")
-        print("  - Use --file-url instead of local file")
-        print("  - Use a smaller or resized image")
+        print(f"\nWARNING: File still larger than {max_size_mb}MB", file=sys.stderr)
+        print("Consider: --quality 70, smaller resolution, or --file-url", file=sys.stderr)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Optimize files for PaddleOCR document parsing",
+        description="Optimize image files for PaddleOCR document parsing",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 Examples:
-  # Optimize image with default quality
-  python scripts/optimize_file.py input.png output.png
-
-  # Optimize with specific quality
-  python scripts/optimize_file.py input.jpg output.jpg --quality 70
+  python optimize_file.py input.png output.jpg --quality 85
+  python optimize_file.py scan.tif output.jpg --target-size 10
 
 Supported formats:
-  - Images: {SUPPORTED_FORMATS_DISPLAY}
+  Images: {SUPPORTED_FORMATS_DISPLAY}
         """,
     )
 
-    parser.add_argument("input", help="Input file path")
-    parser.add_argument("output", help="Output file path")
+    parser.add_argument("input", help="Input image file path")
+    parser.add_argument("output", help="Output image file path")
     parser.add_argument(
         "--quality",
         type=_arg_quality,
@@ -152,25 +205,24 @@ Supported formats:
     output_path = Path(args.output)
 
     if not input_path.exists():
-        print(f"ERROR: Input file not found: {input_path}")
+        print(f"ERROR: Input file not found: {input_path}", file=sys.stderr)
         sys.exit(1)
 
     ext = input_path.suffix.lower()
+    if ext not in SUPPORTED_EXTENSIONS:
+        print(
+            f"ERROR: Unsupported file format: {ext} (supported: {SUPPORTED_FORMATS_DISPLAY})",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
-    if ext in SUPPORTED_EXTENSIONS:
-        try:
-            optimize_image(input_path, output_path, args.quality, args.target_size)
-        except Exception as e:
-            print(f"ERROR: {e}")
-            sys.exit(1)
-    else:
-        print(f"ERROR: Unsupported file format: {ext}")
-        print(f"Supported: {SUPPORTED_FORMATS_DISPLAY}")
+    try:
+        optimize_image(input_path, output_path, args.quality, args.target_size)
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
 
     print(f"\nOptimized file saved to: {output_path}")
-    print("\nYou can now process with:")
-    print(f'  python scripts/layout_caller.py --file-path "{output_path}" --pretty')
 
 
 if __name__ == "__main__":

@@ -1,6 +1,9 @@
 # Source Persistence
 
-All sources must be recorded in `datas/sources.jsonl` as newline-delimited JSON. This file is the single source of truth for citations.
+All final sources are stored in `datas/sources.jsonl` as newline-delimited JSON.
+During Phase A, each parallel thread writes to its own `datas/sources_T{NN}.jsonl`
+to prevent concurrent write collisions; at Step 2.5 (before Phase B writing),
+`merge_sources.py` merges, deduplicates, and freezes final sequential IDs `1..N`.
 
 ## Schema
 
@@ -26,7 +29,7 @@ Each line is a JSON object with these fields:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `id` | yes | Integer, unique within the project, matching in-text `[N]` |
+| `id` | yes | Thread-scoped string (`"T01-1"`) during Phase A; unique integer (`1..N`) in merged `datas/sources.jsonl` matching in-text `[N]` |
 | `type` | yes | `paper`, `patent`, `official`, `news`, `preprint`, `database`, `company` |
 | `title` | yes | Short descriptive title |
 | `authors` | no | Authors, assignee, or issuing agency |
@@ -40,46 +43,51 @@ Each line is a JSON object with these fields:
 
 *If `url` is truly unavailable, set it to `""` and explain in `notes`.
 
-## Thread agent responsibilities
+## Thread agent responsibilities (Phase A)
 
-When a thread agent finds a source, it must:
+When thread `T{NN}` finds a source, it must:
 
-1. Append a complete source record to `datas/sources.jsonl` immediately.
-2. Use the next available integer ID.
-3. Annotate findings with `[N]` matching that ID.
+1. Append a complete source record to `datas/sources_T{NN}.jsonl` immediately
+   (do NOT write directly to shared `datas/sources.jsonl`).
+2. Assign a thread-scoped ID (`"T{NN}-1"`, `"T{NN}-2"`, ...).
+3. Annotate findings in `drafts/T{NN}_{topic}.md` with `[T{NN}-1]`, `[T{NN}-2]`.
 4. Prefer high-confidence sources; mark company/press sources appropriately.
 
-## Merge and deduplication
+## Merge and ID freeze (Step 2.5 — BEFORE Phase B writing)
 
-Before citation verification, run:
+Run from the `{project_name}/` workspace directory:
 
 ```bash
-python scripts/merge_sources.py datas/sources.jsonl
+python <skill_dir>/scripts/merge_sources.py datas/ --output datas/sources.jsonl --rewrite-drafts drafts/
 ```
 
 This script:
-- Removes duplicate URLs/PMIDs/patent numbers.
-- Reassigns IDs sequentially.
-- Outputs `datas/sources.jsonl` in place and writes `datas/sources_backup.jsonl`.
+- Reads all `datas/sources_*.jsonl` files (or a single `datas/sources.jsonl` if
+  passed a single file path).
+- Deduplicates by normalized `identifier` (PMID/DOI/patent), `url`, or `title`.
+- Assigns final sequential integer IDs `1..N`.
+- Writes `datas/sources.jsonl` (backing up any existing `datas/sources.jsonl` to
+  `datas/sources.jsonl.bak`) and saves the old-to-new mapping to
+  `datas/source_id_map.json`.
+- When `--rewrite-drafts drafts/` is passed, rewrites all `[T{NN}-k]` / `[C-k]`
+  markers in `drafts/*.md` to final `[N]` IDs so Phase B writers use exact IDs.
 
-## Citation verification
-
-Run:
+## Citation verification (Step 5)
 
 ```bash
-python scripts/verify_citations.py report.md datas/sources.jsonl
+python <skill_dir>/scripts/verify_citations.py report.md datas/sources.jsonl
 ```
 
 It checks:
+- No duplicate source `id` entries exist in `datas/sources.jsonl`.
 - Every `[N]` in `report.md` resolves to a source ID.
 - Every source ID is cited at least once.
 - Every source has a non-empty `url` or `identifier`.
-- No duplicate IDs exist.
 
 ## Handling missing sources
 
 If a key claim lacks a source:
 
-1. Search again for a supporting source.
+1. Search again for a supporting source (during Phase A or before finalizing).
 2. If none is found, downgrade the claim to a hypothesis and mark `⚠️ unverified`.
 3. Do not delete the claim unless it is no longer relevant.

@@ -1,91 +1,112 @@
 ---
 name: docx
-description: "Create and edit Word documents (.docx) — C# + OpenXML SDK for creation, WIR engine for editing/comments/tracked changes. Use for any .docx task including document creation, editing, comments, revisions, footnotes, TOC, and Markdown-to-Word conversion."
+description: "Create, edit, polish, and validate Word documents (.docx) via C# OpenXML SDK, pure-Python surgical/OOXML editing, Linux/WSL2 WIR engine, citation-aware Markdown-to-Word conversion, and post-build figure/structural verification (Route 4). Use for creating formatted .docx reports/specs from scratch, filling or editing existing .docx templates, adding comments/tracked changes, converting Markdown + citation.jsonl into Word, or polishing/verifying delivered reports (widen_extent, count invariants, serialized Word open). Do not use for full-document translation pipelines (use baoyu-document-translator-v4) or authoring standalone charts (use consulting-chart)."
 ---
 
 # Part 1: Routing
 
-`read file` / `cat` only extracts plain text from `.docx` — all formatting is lost. If the task involves appearance or structure, use WIR engine's `session.read()` instead.
+Plain text extraction (`cat` / `read_file`) strips all Word formatting. Whenever layout, styles, or structure matter, route by what inputs you have:
 
-## Route = What You Have
+## Route 1 — Existing `.docx` whose format/style matters (Edit / Fill / Review)
 
-**1. WIR** (`references/wir-reference.md`) — A .docx exists whose **format/style matters** to the output.
+If a `.doc` (legacy binary) is supplied, convert first: `libreoffice --headless --convert-to docx <file.doc>`.
+If the `.docx` is only a raw text/data source whose formatting is irrelevant, extract text and use Route 3 instead.
 
-The user provides a template, a document to edit/modify/review/annotate, or any file whose formatting should be preserved or referenced. This file is your output foundation — read it, modify it, fill it.
+Choose the editing backend by **task type and platform**:
 
-If the .docx is merely a content/data source (e.g., reference papers, raw data exports) and its formatting is irrelevant, just `read file` to extract text — that is NOT a WIR case.
+| Task | Native Windows 11 / macOS | Linux / WSL2 (Python 3.12) |
+|------|---------------------------|----------------------------|
+| **Format-preserving text replacement / template fill** (keeps runs, fields, headers/footers, text boxes, footnotes) | **`scripts/engine_surgical/`** (`extract_elements()` + `apply_keyed_parts()` / `SurgicalSession`). Pure Python; shared write-back core for `baoyu-document-translator-v4` (do not duplicate). | `scripts/engine_surgical/` or WIR (`scripts/engine/`). |
+| **Comments, tracked changes (`w:ins`/`w:del`), or structural edits** (insert/delete paragraphs, tables, sections) | **Preferred: run WIR `.so` under WSL2 (Python 3.12)**. On pure native Windows/macOS, use **C# OpenXML SDK** or **`zipfile + lxml` direct OOXML editing** followed by `Validator.dll` validation (do **not** use `python-docx` high-level API for tracked changes or complex comments; `engine_surgical` only modifies `<w:t>` text). | **WIR engine** (`scripts/engine/_core...linux-gnu.so`, retained intentionally for Linux/WSL2 machines; see `references/wir-reference.md`). |
 
-`.doc` format → convert first: `libreoffice --headless --convert-to docx`
+## Route 2 — Markdown + `citation.jsonl` (`md2docx`)
 
-**编辑路线的平台二选一**:WIR 内核是编译扩展(`engine/_core…linux-gnu.so`),仅 Linux/WSL2 可载;原生 Windows / macOS 或扩展导入失败时,同一编辑域用 **`scripts/engine_surgical/`**(纯 Python 外科手术内核,key→parts 寻址写回,只动 `<w:t>` 节点)。两者 open/save 同形但 edit 语义不同(见该包 docstring);baoyu-document-translator-v2 的写回即调用本包,勿再复制。
+Trigger when you have an existing Markdown document **paired with a `citation.jsonl` database** requiring Word footnotes, endnotes, or hyperlink cross-references (`references/md2docx-reference.md`):
 
-**2. md2docx** (`references/md2docx-reference.md`) — When you are the Orchestrator (you have `create_subagent` and dispatch `task`) and your sub-agents have returned `.md` files. Convert their output to a formatted Word document using the md2docx pipeline.
+```bash
+python scripts/md2docx/md2docx_convert.py <file.md> --citation <citation.jsonl> --style footnote --output-dir <dir>
+```
 
-If you do NOT have `create_subagent` / `task` tools, you are not an Orchestrator and md2docx does not apply. Do not write markdown yourself and convert with pandoc — the result is mediocre. Use Create (C#) for high-quality output.
+Intermediate files are isolated in a temporary directory and cleaned up automatically. Do **not** author Markdown from scratch just to run `pandoc` — use Route 3 for native Word quality.
 
-**3. Create** (`references/openxml-sdk-reference.md`) — Neither of the above.
+## Route 3 — Create from Scratch (C# + OpenXML SDK)
 
-No target .docx, no upstream .md. Build the document from scratch using C# + OpenXML SDK via `./scripts/docx build`.
+No target `.docx`, no upstream Markdown + `citation.jsonl`. Build via the cross-platform Python CLI (`references/openxml-sdk-reference.md`):
+
+```bash
+python scripts/docx_cli.py env                      # Check dotnet, Python, optional tools
+python scripts/docx_cli.py init                     # Create workspace in <temp>/docx-work/
+# Edit <temp>/docx-work/Program.cs
+python scripts/docx_cli.py build <output/Topic.docx> # Compile -> run -> auto-fix -> validate
+```
+
+`build` auto-aligns `Docx.csproj` with the installed .NET SDK (8/9/10+), checks CJK `\uXXXX` escape abuse, runs `validate_all.py` (with pure-Python fallback on Windows/macOS), and runs `dotnet validator/Validator.dll` (with `rollForward: Major`).
+
+## Route 4 — Polish & Verify Delivered `.docx` (成品文档精修与验尸)
+
+Use after a `.docx` report is built (or received for final QA) to widen undersized embedded figures without redrawing, guard structural count invariants, and run a serialized host-app open test (`references/polish-and-verify.md`):
+
+```bash
+python scripts/polish/verify_counts.py capture <report.docx> --out baseline.json
+python scripts/polish/widen_extent.py <report.docx> --list
+python scripts/polish/widen_extent.py <report.docx> --target rId12=445pt --dry-run
+python scripts/polish/verify_counts.py check <report.docx> --baseline baseline.json
+python scripts/polish/verify_word_open.py <report.docx>
+```
+
+Before redrawing any embedded figure for small text, check `consulting-chart/scripts/scale_law.py` on its source SVG first, then prefer byte-exact `widen_extent.py` (Lever 1) over redrawing (Lever 2). Never run `verify_word_open.py` concurrently across parallel agents.
 
 ---
 
-# Part 2: Execution
+# Part 2: Reference Map (Progressive Disclosure)
 
-## File Structure
+Read the **Common Traps** section of your chosen reference first, then load only the modules your document needs:
 
 ```
 docx/
-├── SKILL.md                       ← This file (routing + rules)
+├── SKILL.md                           ← Routing, platform matrix, rules
 ├── references/
-│   ├── openxml-sdk-reference.md   → Creation: patterns, traps, all you need
-│   ├── wir-reference.md           → WIR editing interface + patterns
-│   ├── md2docx-reference.md       → Citation pipeline → Word conversion
-│   ├── chart-reference.md         → Native Word charts (pie, bar, line)
-│   ├── omml-reference.md          → OMML math equation patterns
-│   └── matplotlib-guide.md        → Charts Word can't do natively
+│   ├── openxml-sdk-reference.md       → C# creation patterns, XSD order, traps
+│   ├── wir-reference.md               → WIR editing API (Linux/WSL2 only)
+│   ├── md2docx-reference.md           → Citation-aware MD -> Word pipeline
+│   ├── cover-background-guide.md      → Bespoke Playwright + SVG cover/body/back backgrounds
+│   ├── polish-and-verify.md           → Route 4: 3-lever figure polish & 8 verification rules
+│   ├── chart-reference.md             → Native Word charts (pie, bar, line)
+│   ├── omml-reference.md              → OMML math equations
+│   └── matplotlib-guide.md            → Complex charts Word cannot render natively
 ├── scripts/
-│   ├── docx                       → Unified entry point (the only script to call)
-│   ├── engine/                    → WIR engine (editing core, Linux/WSL2 only)
-│   ├── engine_surgical/           → Surgical editing core (pure Python, all platforms)
-│   ├── md2docx/                   → Citation → Word pipeline
-│   ├── generate_backgrounds.py    → Style reference: Morandi curves (read for technique, don't call directly)
-│   ├── generate_inkwash_backgrounds.py  → Style reference: ink wash
-│   ├── generate_swiss_backgrounds.py    → Style reference: Swiss grid
-│   ├── generate_geometric_backgrounds.py → Style reference: geometric blocks
-│   ├── generate_gradient_backgrounds.py  → Style reference: gradient ribbons
-│   └── generate_formal_backgrounds.py    → Style reference: formal double border
+│   ├── docx_cli.py                    → Cross-platform CLI (env / init / build / validate)
+│   ├── validate_all.py                → Element-order auto-fix + business rules (native + pure-Python fallback)
+│   ├── engine/                        → WIR native core (Linux/WSL2 + Python 3.12 only)
+│   ├── engine_surgical/               → Pure-Python format-preserving extract + write-back (all platforms)
+│   ├── polish/                        → Route 4 tools (widen_extent.py, verify_counts.py, verify_word_open.py)
+│   └── md2docx/                       → Citation -> Word post-processors
+├── validator/                         → Cross-platform OpenXML XSD Validator.dll (.NET rollForward: Major)
 └── assets/templates/
-    ├── Example.cs                 → English document demo (conditional required)
-    └── CJKExample.cs              → Chinese/CJK document demo (conditional required)
+    ├── Docx.csproj                    → C# project template (.NET 10 + OpenXml 3.3.0)
+    ├── Program.cs                     → Starter entry point
+    ├── Example.cs                     → English full-featured demo (consult when building EN docs)
+    └── CJKExample.cs                  → Chinese/CJK demo (consult when building CJK docs)
 ```
 
-## Validation
+---
 
-- **Creation**: `./scripts/docx build` runs the full pipeline (compile → generate → auto-fix element order → OpenXML validate → business rules)
-- **Editing**: The engine validates internally; after saving, spot-check high-risk areas
+# Part 3: Hard Rules & Quality Standards
 
-## Hard Rules
+1. **Never rewrite an existing template from scratch** — edit in place via Route 1.
+2. **Never hand-write Markdown and pipe through Pandoc** for general document creation — use Route 3.
+3. **Always validate before delivery** — run `python scripts/docx_cli.py validate <file.docx>` after any edit or creation.
+4. **Clean delivery & topic naming** — name files by topic in the user's language (e.g., `储能电站分析报告.docx`, `Energy_Storage_Report.docx`), never `output.docx`; leave no `v1`/`v2`/`final` or temp clutter in the output folder.
+5. **Language consistency** — keep body, headings, headers/footers, TOC, chart labels, and filenames in the user's language.
+6. **Low-saturation 3-tier palette** — pick ONE hue family with Primary (headings) / Dark (body) / Light (captions); never pure `#FF0000`/`#0000FF`.
+7. **Bespoke cover backgrounds** — when a cover is needed, follow `references/cover-background-guide.md` to render original Playwright + SVG PNGs matching your palette; keep center text zones clean with strong contrast.
+8. **Word count tolerance** — targets like "X字左右" allow ±20%.
 
-1. **No manual markdown-to-docx.** Do not write markdown then convert with pandoc. If you are the Orchestrator with upstream .md from sub-agents, use md2docx. Otherwise, always Create (C#).
-2. **Target .docx exists (template, document to edit, format reference) → always WIR**, never rewrite from scratch.
-3. Clean up iteration artifacts — no `v1`/`v2`/`final` clutter in the output directory. Deliver clean, clearly named files only.
-4. Name output files by topic and match the user's language (e.g., Chinese query → `储能电站分析报告.docx`, English query → `Energy_Storage_Report.docx`). Never `output.docx`.
-5. Language consistency — user's conversation language across all elements (body, headings, headers/footers, TOC, chart labels, filenames).
-6. Default to the skill's own toolchain; avoid external libraries unless necessary.
-7. After choosing a route, read the corresponding reference file **in full** before writing any code. Do not skim or skip sections — traps and required patterns appear throughout.
+## Delivery Checklist
 
-## Quality Standards
-
-**Low-saturation color palette.** Pick ONE hue direction, build 3 tiers: Primary (headings) / Dark (body text) / Light (captions). Never pure #FF0000/#0000FF. Cover text color must contrast with its background AND be visually distinct from body text (larger size, different weight, generous spacing).
-
-**Cover/backcover backgrounds.** If the document needs a cover, generate a unique background from scratch — read one of the `generate_*.py` scripts to learn the Playwright + SVG technique, then write your own HTML/SVG with original shapes and colors matching the document's palette. Never reuse or directly call existing background scripts. Cover text must feel like a separate visual space from the body, not just a bigger first paragraph.
-
-**Content constraints.** Word count target "X字左右" means ±20% is acceptable.
-
-**Delivery checklist** (verify before delivering):
-1. Document opens without errors
-2. OpenXML + business rule validation passes
-3. Headers, footers, page numbers present and correctly positioned
-4. No placeholder text remains (`[Company Name]`, `TODO`, etc.)
-5. All images render (build output shows `X images` — if 0, images were not inserted)
-6. Cover/backcover text visibly contrasts with background
+1. File opens cleanly in Word / WPS without repair prompts.
+2. `python scripts/docx_cli.py validate <file.docx>` passes (business rules + OpenXML XSD).
+3. Headers, footers, and page numbers are present and correctly positioned.
+4. Zero placeholder text remains (`[Company Name]`, `TODO`, etc.).
+5. All intended images/charts are embedded (verify image count in `build` output).
+6. Cover/back-cover typography contrasts cleanly against its background.

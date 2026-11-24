@@ -1,0 +1,11 @@
+{
+  "flow_map": true,
+  "flows": [
+    {"from": "IND", "to": "USA", "value": 120},
+    {"from": "CHN", "to": "USA", "value": 90},
+    {"from": "GBR", "to": "USA", "value": 45},
+    {"from": "IND", "to": "GBR", "value": 35},
+    {"from": "DEU", "to": "CAN", "value": 30},
+    {"from": "BRA", "to": "USA", "value": 25}
+  ]
+}

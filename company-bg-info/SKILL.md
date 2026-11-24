@@ -1,144 +1,67 @@
 ---
 name: company-bg-info
-description: Use when the user asks for a background-info / BG-info / company-profile Word document on a potential partner or customer (e.g., “写一个 [公司] 的 BG info” / “参考 Glanbia_BG.docx 的格式”). Generates a single .docx summarising who the company is, why they are strategically relevant, what they sell, how they are organised, recent M&A, and how a partnership could look — with inline hyperlinks and a Sources section.
+description: Use when the user asks for a background-info / BG-info / company-profile Word document on a potential partner or customer (e.g., "写一个 [公司] 的 BG info" / "company background brief"). Generates a concise, fact-packed .docx summarising company overview, strategic relevance, operating divisions, key brands, financials, technology layout, recent M&A, and a collaboration hook — with inline hyperlinks and a Sources section.
 ---
 
 # Partner Company Background Info (BG Info) Skill
 
-Use this skill when the user asks for a **background-info / BG-info / company-profile Word document** on a potential partner or customer (e.g., “写一个 [公司] 的 BG info” / “参考 Glanbia_BG.docx 的格式”).
-
-The deliverable is a single `.docx` that summarises who the company is, why they are strategically relevant, what they sell, how they are organised, recent M&A, and how a partnership could look — with **inline hyperlinks and a Sources section**.
-
----
+Generates a single `.docx` fact-pack on a potential partner or customer: who they are, why they matter strategically, what they sell, how they are organised, recent M&A, and a one-paragraph collaboration hook — with inline hyperlinks and a bulleted Sources section.
 
 ## 1. Output structure (follow this order)
 
-1. **Document title** — “[Company] BG info”
-2. **Main heading** — “[Company]”
-3. **Company overview** — 1–2 paragraphs: HQ, revenue, market position, listed status, division structure.
-4. **Strategic context** — 1 short paragraph on why this company is relevant to the user’s platform/technology; include a key investor-slide or chart image if available.
-5. **Operating divisions / business segments** — 4-column table: Division, Description, Key brands/products, Recent revenue/EBITDA.
-6. **Selected ingredient/product brands** — Subsections by category with short, factual brand descriptions.
-7. **Key financials** — 3-column table: Metric, Year-1, Year-2 / guidance.
-8. **Alternative proteins / precision fermentation / relevant technology layout** — Fact block or table covering:
-   - Public statements (CMD/AR slides, CEO/CSO quotes)
-   - Internal initiatives / business units
-   - Partnerships, JVs and licensing deals
-   - Investments / venture bets
-   - M&A deals in the space
-   If none, state clearly: “No public internal platform announced; strategic interest signalled by X.”
-9. **Recent M&A / transactions** — 4-column table: Year, Target/asset, Transaction amount, Description.
-10. **Innovation & partnership landscape** — Concise subsections:
-    - Open innovation / R&D facilities and customer-collaboration model
-    - Relevant product line (e.g., Bioferrin)
-    - Stance on precision fermentation / synthetic biology
-    - Proposed collaboration hook (one paragraph)
-11. **Sources** — Bulleted list of all URLs used, rendered as blue hyperlinks.
+1. **Document title** — `[Company] BG info` (plus optional top-right company logo)
+2. **Main heading** — `[Company]`
+3. **Company overview** — 1–2 paragraphs: HQ, revenue, market position, listing status, division structure.
+4. **Strategic context** — 1 short paragraph on relevance to the user's platform/technology; insert a key investor slide or chart if available.
+5. **Operating divisions** — 4-column table: Division, Description, Key brands / products, Revenue / EBITDA.
+6. **Selected ingredient / product brands** — Grouped by category with short factual descriptions.
+7. **Key financials** — Multi-year table (Metric + last 2 fiscal years / guidance).
+8. **Alternative proteins / precision fermentation / relevant technology layout** — Public statements, internal initiatives, partnerships/JVs, investments, M&A. If none, state: *"No public internal platform announced; strategic interest signalled by X."*
+9. **Recent M&A / transactions** — 4-column table: Year, Target / asset, Transaction amount, Description.
+10. **Innovation & partnership landscape** — Open innovation / R&D facilities, relevant product lines, stance on precision fermentation / synbio, and a **one-paragraph proposed collaboration hook**.
+11. **Sources** — Bulleted list of all URLs used, rendered as blue underlined hyperlinks.
 
----
+## 2. Workflow
 
-## 2. Visual format (matching Glanbia_BG.docx)
+1. **Confirm target & existing files** — Check any user-supplied reports, URLs, or existing files under `output/sources/`.
+2. **Collect public facts** — Follow `references/data-collection-checklist.md` (annual report/CMD deck, financials, divisions, M&A, VC/CVC, alt-protein/PF signals, leadership quotes, product pages, logo).
+3. **Extract key investor slide (optional)** — Render a PDF page to PNG:
+   ```bash
+   python scripts/extract_pdf_page.py --input output/sources/investor-deck.pdf --page 3 --output output/tmp/key-slide.png --dpi 200
+   ```
+4. **Prepare JSON** — Populate `output/tmp/data.json` following `references/schema.json`. Use Markdown-style `[anchor text](https://...)` inside any narrative field to emit blue inline hyperlinks; repeat all referenced URLs in `sources`.
+5. **Validate & generate DOCX**:
+   ```bash
+   python scripts/validate_bg_json.py --input output/tmp/data.json
+   python scripts/generate_bg_doc.py --input output/tmp/data.json --output output/Company_BG_info.docx
+   ```
+   (`generate_bg_doc.py` also runs schema validation automatically before rendering and fails fast if a referenced image/logo file is missing.)
+6. **Verify deliverable** — Confirm the `.docx` opens cleanly, hyperlinks work, and all tables/images render properly.
 
-- **Font:** Schibsted Grotesk for all text.
-- **Title:** 14 pt, bold, dark grey `#333333`.
-- **Main company heading:** 18 pt, bold, dark grey `#333333`.
-- **Body:** 10 pt, dark grey `#333333`, 1.5 line spacing.
-- **Section headings:** 10 pt, **bold**, olive green `#617D24`. Use Word styles `Heading 1` and `Heading 2`; do not make them dramatically larger than body text.
-- **Tables:** `Table Grid` style, header row shaded `#E5E5E5`, 9 pt text, vertically centred.
-- **Images:** centre-aligned, width ~5.5 in, italic caption in 8 pt `#666666`.
-- **Hyperlinks:** blue `#0563C1`, underlined, in-line where a claim is made; collect the same URLs again in the Sources section.
+## 3. Visual & content conventions
 
-Full format specification: `references/format-spec.md`
+- Full visual typography, colour palette (`#333333`, `#617D24`, `#0563C1`, `#E5E5E5`), spacing, and table rules are defined in `references/format-spec.md`.
+- **Font note**: Documents specify `Schibsted Grotesk`. On Windows/macOS machines where it is not installed, Word automatically falls back to the system sans-serif (e.g., Calibri/Aptos); install the Google Font locally if exact metric fidelity is required.
+- **Keep analysis minimal**: BG Info is a concise fact pack, not a long strategic essay. Distill lengthy source reports into the 11-section structure above.
+- **Language**: Respond to the user in their prompt language; default the generated `.docx` to English unless requested otherwise.
+- **Custom template override**: If the user supplies an existing `.docx` and asks to match its exact layout, use the `docx` skill instead of building from scratch.
 
----
+## 4. Quality checklist
 
-## 3. Data-collection workflow
+- [ ] Document opens without corruption; `Heading 1` / `Heading 2` outline appears in Word navigation pane
+- [ ] All tables have `#E5E5E5` shaded headers and 9 pt text; headings are 10 pt bold `#617D24`
+- [ ] Inline hyperlinks and bulleted `Sources` links are clickable
+- [ ] Relevant investor slide / logo embedded when available (no broken image placeholders)
+- [ ] Technology layout section explicitly populated or marked *"none publicly announced"*
+- [ ] Saved under `output/[Company]_BG_info.docx`
 
-1. **Ask / confirm target** and any existing materials (reports, source folders, URLs).
-2. **Search the web** for:
-   - Latest annual report and CMD/Investor Day deck
-   - Revenue, EBITDA, EPS, ROCE targets
-   - Division / segment structure and brands
-   - Recent acquisitions, divestitures and investments (including VC/CVC if any)
-   - Any internal initiatives, partnerships, JVs or investments in **precision fermentation, alternative proteins, synthetic biology or related technology**
-   - Leadership quotes on innovation, open collaboration, or relevant technology
-   - Relevant product pages (e.g., lactoferrin, whey proteins, premix)
-3. **Use previously collected sources** in the user’s `output/sources/` folder (PDFs, images, text extracts).
-4. **Extract key slide as image** if an investor deck is available: use `scripts/extract_pdf_page.py` to render the relevant page to PNG and insert it.
-5. **Write the docx** with `scripts/generate_bg_doc.py` (JSON → DOCX) or python-docx directly.
-6. **Validate** the JSON with `scripts/validate_bg_json.py` before generation.
-7. **Verify** the file opens and that external hyperlinks are present.
+## 5. Reference files
 
-Data-collection checklist: `references/data-collection-checklist.md`
-JSON schema: `references/json-schema.md`
-
----
-
-## 4. Code templates
-
-### 4.1 JSON-driven generation (recommended)
-
-Populate a JSON file following `references/json-schema.md`, then run:
-
-```bash
-python scripts/validate_bg_json.py --input data.json
-python scripts/generate_bg_doc.py --input data.json --output /home/adam18294/output/Company_BG_info.docx
-```
-
-### 4.2 PDF page extraction
-
-```bash
-python scripts/extract_pdf_page.py --input report.pdf --page 5 --output /tmp/slide.png --dpi 200
-```
-
-### 4.3 Inline python-docx template
-
-If the JSON pipeline is too rigid, use the inline python-docx template from the original SKILL.md (Section 4) as a starting point.
-
----
-
-## 5. Image handling
-
-- If the company has an investor PDF, locate the most relevant page and render it:
-
-```bash
-python scripts/extract_pdf_page.py --input investor-deck.pdf --page 3 --output /tmp/key-slide.png --dpi 200
-```
-
-- Insert into the Word doc with a caption.
-- Also insert the company logo if available (top-right, ~1.2 in wide).
-
----
-
-## 6. Sources discipline
-
-- Every factual claim that came from a specific webpage or document should be hyperlinked inline **or** appear in the Sources section.
-- Typical sources to include:
-  - Annual report / CMD deck download page
-  - Investor relations results page
-  - Company “Our Journey” / M&A history page
-  - Product-page URLs for key brands
-  - Leadership / innovation quotes page
-- If a URL is long or repetitive, use a short label in the Sources section and hyperlink it.
-
----
-
-## 7. Quality checks before finishing
-
-- [ ] Document opens without corruption.
-- [ ] All tables have a shaded header row and 9 pt text.
-- [ ] Section headings are 10 pt bold green, not oversized.
-- [ ] At least one relevant image/chart is inserted.
-- [ ] No unnecessary analytical commentary; the doc presents facts, tables, and a one-paragraph proposed hook.
-- [ ] An “Alternative proteins / precision fermentation / relevant technology layout” section is included (even if the conclusion is “none publicly announced”).
-- [ ] Investments / venture activity are captured if they exist.
-- [ ] File is saved under `output/` with naming convention `[Company]_BG_info.docx`.
-
----
-
-## 8. Notes
-
-- If the user provides an existing reference `.docx` and says “match this format exactly”, prefer the **WIR engine** in the `docx` skill to read and clone that document rather than building from scratch.
-- If the user’s existing report is long (e.g., a full strategic intelligence report), distill it into the shorter BG-info structure above; do not paste the whole report.
-- **Keep analysis minimal.** BG Info is a fact pack: who the company is, what they sell, what they have done, and a one-paragraph collaboration hook. Avoid long strategic essays or competitor profiles.
-- Always use the **same language** as the user’s request for the skill response, but default to English for the document unless the user asks otherwise.
+| File | Purpose |
+|------|---------|
+| `references/schema.json` | JSON Schema (draft-07) for `generate_bg_doc.py` input |
+| `references/format-spec.md` | Exact typography, margins, table, image, and hyperlink styling |
+| `references/data-collection-checklist.md` | Research targets, URL priorities, and source quality gates |
+| `scripts/validate_bg_json.py` | Standalone JSON validator (also called by `generate_bg_doc.py`) |
+| `scripts/generate_bg_doc.py` | Deterministic JSON → `.docx` generator |
+| `scripts/extract_pdf_page.py` | PDF slide-to-PNG extractor (PyMuPDF) |

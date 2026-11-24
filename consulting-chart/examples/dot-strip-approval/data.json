@@ -1,0 +1,9 @@
+{
+  "dot_strip": true,
+  "unit": "days",
+  "categories": {
+    "Sales": [12, 15, 18, 22, 27, 31],
+    "Ops": [8, 11, 14, 19, 25],
+    "Finance": [20, 24, 29, 33, 38]
+  }
+}

@@ -1,0 +1,192 @@
+{
+  "type": "composition",
+  "title": "欧洲城市 GDP 前九名:2022–2025",
+  "panel_title": "城市 GDP(十亿美元)",
+  "columns": [
+    {
+      "label": "2022",
+      "segments": [
+        {
+          "name": "Paris",
+          "value": 108.61
+        },
+        {
+          "name": "Zurich",
+          "value": 106.88
+        },
+        {
+          "name": "Vienna",
+          "value": 120.98
+        },
+        {
+          "name": "Amsterdam",
+          "value": 106.32
+        },
+        {
+          "name": "Brussels",
+          "value": 97.53
+        },
+        {
+          "name": "Stockholm",
+          "value": 103.75
+        },
+        {
+          "name": "Lisbon",
+          "value": 95.09
+        },
+        {
+          "name": "Prague",
+          "value": 92.98
+        },
+        {
+          "name": "Copenhagen",
+          "value": 116.07
+        }
+      ],
+      "total": 948.21
+    },
+    {
+      "label": "2023",
+      "segments": [
+        {
+          "name": "Paris",
+          "value": 121.81
+        },
+        {
+          "name": "Zurich",
+          "value": 112.85
+        },
+        {
+          "name": "Vienna",
+          "value": 132.81
+        },
+        {
+          "name": "Amsterdam",
+          "value": 106.22
+        },
+        {
+          "name": "Brussels",
+          "value": 98.17
+        },
+        {
+          "name": "Stockholm",
+          "value": 101.37
+        },
+        {
+          "name": "Lisbon",
+          "value": 97.1
+        },
+        {
+          "name": "Prague",
+          "value": 90.77
+        },
+        {
+          "name": "Copenhagen",
+          "value": 116.1
+        }
+      ],
+      "total": 977.2
+    },
+    {
+      "label": "2024",
+      "segments": [
+        {
+          "name": "Paris",
+          "value": 129.46
+        },
+        {
+          "name": "Zurich",
+          "value": 111.53
+        },
+        {
+          "name": "Vienna",
+          "value": 103.93
+        },
+        {
+          "name": "Amsterdam",
+          "value": 106.9
+        },
+        {
+          "name": "Brussels",
+          "value": 111.09
+        },
+        {
+          "name": "Stockholm",
+          "value": 107.34
+        },
+        {
+          "name": "Lisbon",
+          "value": 96.41
+        },
+        {
+          "name": "Prague",
+          "value": 100.58
+        },
+        {
+          "name": "Copenhagen",
+          "value": 127.83
+        }
+      ],
+      "total": 995.07
+    },
+    {
+      "label": "2025",
+      "segments": [
+        {
+          "name": "Paris",
+          "value": 133.52
+        },
+        {
+          "name": "Zurich",
+          "value": 126.31
+        },
+        {
+          "name": "Vienna",
+          "value": 121.46
+        },
+        {
+          "name": "Amsterdam",
+          "value": 108.53
+        },
+        {
+          "name": "Brussels",
+          "value": 109.75
+        },
+        {
+          "name": "Stockholm",
+          "value": 124.18
+        },
+        {
+          "name": "Lisbon",
+          "value": 106.32
+        },
+        {
+          "name": "Prague",
+          "value": 100.58
+        },
+        {
+          "name": "Copenhagen",
+          "value": 124.33
+        }
+      ],
+      "total": 1054.98
+    }
+  ],
+  "insights": [
+    [
+      "总量增长",
+      "九个城市合计从 948.21 增至 1,054.98,四年 +11.3%。"
+    ],
+    [
+      "Paris 双领先",
+      "2025 年 133.52,规模最大;较 2022 年 +22.9%,增速也最快。"
+    ],
+    [
+      "Vienna 增速最慢",
+      "120.98 到 121.46,四年仅 +0.4%,九个城市中最低。"
+    ]
+  ],
+  "source": "示例数据(用户样张)",
+  "_kind": "composition",
+  "kicker": null
+}

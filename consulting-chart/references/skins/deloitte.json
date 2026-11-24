@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "name": "deloitte",
+  "style": "deloitte",
+  "font": "'Arial Narrow', Arial, 'Microsoft YaHei', 'PingFang SC', sans-serif",
+  "font_title": "'Arial Narrow', Arial, 'Microsoft YaHei', 'PingFang SC', sans-serif",
+  "kicker_color": "#6B6B6B",
+  "background": "#F1F1F2",
+  "canvas": {"width": 1252, "height": 1156},
+  "colors": {
+    "ink900": "#000000",
+    "ink700": "#333333",
+    "ink500": "#6B6B6B",
+    "ink400": "#8F8F8F",
+    "hair": "#D8D8D8",
+    "base": "#000000",
+    "primary": "#0D96D4",
+    "accent": "#0D96D4",
+    "second": "#009B9D",
+    "light": "#AFE7F2",
+    "step": "#A6A5A5",
+    "pos": "#86BD40",
+    "neg": "#E0393E",
+    "band": "#D8F6EE",
+    "black": "#000000",
+    "dark": "#2E5248",
+    "panel": "#F1F1F2"
+  },
+  "type": {"title": 26, "panel": 13, "value": 11, "label": 10.5, "note": 8.5},
+  "lines": {"hair": 1, "base": 1.6, "dotted": "2 3"},
+  "category_colors": {}
+}

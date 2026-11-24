@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "name": "economist",
+  "font": "Gill Sans MT, Gill Sans, Lato, Fira Sans, Source Sans Pro, Open Sans, DejaVu Sans, sans-serif, 'Microsoft YaHei', sans-serif",
+  "font_title": "Gill Sans MT, Gill Sans, Lato, Fira Sans, Source Sans Pro, Open Sans, DejaVu Sans, sans-serif, 'Microsoft YaHei', sans-serif",
+  "kicker_color": "#E30010",
+  "canvas": {
+    "width": 1280,
+    "height": 720
+  },
+  "colors": {
+    "ink900": "#121212",
+    "ink700": "#525254",
+    "ink500": "#6B6B6B",
+    "ink400": "#8F8F8F",
+    "hair": "#D8D8D8",
+    "base": "#111111",
+    "primary": "#004C64",
+    "accent": "#009FD7",
+    "second": "#528EA5",
+    "light": "#74BCBF",
+    "step": "#BFBFBF",
+    "pos": "#009FD7",
+    "neg": "#E30010",
+    "band": "#D1EDF7",
+    "black": "#0A0A0A"
+  },
+  "type": {
+    "title": 28,
+    "panel": 13,
+    "value": 11,
+    "label": 10.5,
+    "note": 8.5
+  },
+  "lines": {
+    "hair": 1,
+    "base": 1.6,
+    "dotted": "2 3"
+  },
+  "category_colors": {
+    "Accounting": "black",
+    "Customer Service": "primary",
+    "Procurement": "second",
+    "Sales Support": "light"
+  },
+  "generated_by": "scripts/import_economist_skin.py",
+  "source": "vendor/EconomistStyle/src/economiststyle/styles/theeconomist.mplstyle"
+}

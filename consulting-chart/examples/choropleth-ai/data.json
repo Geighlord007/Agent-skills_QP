@@ -1,0 +1,19 @@
+{
+  "choropleth": true,
+  "values": {
+    "USA": 42,
+    "NLD": 40,
+    "CHN": 38,
+    "KOR": 37,
+    "AUS": 35,
+    "CAN": 34,
+    "GBR": 33,
+    "DEU": 31,
+    "FRA": 30,
+    "IND": 29,
+    "BRA": 26,
+    "JPN": 24,
+    "ZAF": 22,
+    "MEX": 21
+  }
+}

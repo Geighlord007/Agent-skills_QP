@@ -28,16 +28,19 @@ MiMo. When one engine errors, say so and offer the other; never silently swap en
 
 ## MiMo commands
 
+Run from any directory using `"$HOME/.agents/skills/exa-search/scripts/mimo.mjs"` (works in
+Windows PowerShell, Git Bash, macOS, and Linux) or `node scripts/mimo.mjs` from the skill root:
+
 ```bash
 # Cited answer + citation list (default: force search, mimo-v2.6-flash)
-node "%USERPROFILE%\.agents\skills\exa-search\scripts\mimo.mjs" search "上海今天天气"
+node "$HOME/.agents/skills/exa-search/scripts/mimo.mjs" search "上海今天天气"
 
 # Pro model, wider coverage
-node mimo.mjs search "2026年合成生物学最新政策" --model pro --maxkw 8 --limit 10
+node "$HOME/.agents/skills/exa-search/scripts/mimo.mjs" search "2026年合成生物学最新政策" --model pro --maxkw 8 --limit 10
 
 # Raw citation rows only, or the full API response
-node mimo.mjs search "今天有什么科技新闻" --cites
-node mimo.mjs search "小米 SU7 销量" --json
+node "$HOME/.agents/skills/exa-search/scripts/mimo.mjs" search "今天有什么科技新闻" --cites
+node "$HOME/.agents/skills/exa-search/scripts/mimo.mjs" search "小米 SU7 销量" --json
 ```
 
 | Flag | Meaning |
@@ -56,22 +59,22 @@ Output: answer text, then `Citations (n)` with title/site/date/URL, then `usage:
 
 ```bash
 # Web search (default: 6 results, type=auto, Dynamic Highlights on)
-node "%USERPROFILE%\.agents\skills\exa-search\scripts\exa.mjs" search "how do Cloudflare Workers free tier limits work"
+node "$HOME/.agents/skills/exa-search/scripts/exa.mjs" search "how do Cloudflare Workers free tier limits work"
 
 # More results, neural mode, include full page text
-node exa.mjs search "TiDB Cloud serverless free tier" --num 10 --type neural --text
+node "$HOME/.agents/skills/exa-search/scripts/exa.mjs" search "TiDB Cloud serverless free tier" --num 10 --type neural --text
 
 # Category-focused search (news | github | pdf | paper | tweet | company | ...)
-node exa.mjs search "GLM-5.2 release notes" --category news
+node "$HOME/.agents/skills/exa-search/scripts/exa.mjs" search "GLM-5.2 release notes" --category news
 
 # Fetch contents of specific URLs (full text / highlights)
-node exa.mjs contents "https://vercel.com/docs/functions" "https://developers.cloudflare.com/d1/" --text
+node "$HOME/.agents/skills/exa-search/scripts/exa.mjs" contents "https://vercel.com/docs/functions" "https://developers.cloudflare.com/d1/" --text
 
 # Find pages similar to a URL
-node exa.mjs similar "https://developers.cloudflare.com/d1/" --num 5
+node "$HOME/.agents/skills/exa-search/scripts/exa.mjs" similar "https://developers.cloudflare.com/d1/" --num 5
 
 # Synthesized answer with citations
-node exa.mjs answer "which free database tiers support MySQL in 2026"
+node "$HOME/.agents/skills/exa-search/scripts/exa.mjs" answer "which free database tiers support MySQL in 2026"
 ```
 
 | Flag | Applies to | Meaning |
@@ -79,7 +82,7 @@ node exa.mjs answer "which free database tiers support MySQL in 2026"
 | `--num N` / `-n N` | search, similar | Number of results (default 6) |
 | `--type T` | search | `auto` (default), `keyword`, `neural`, `fast`, `instant`, `deep-lite`, `deep`, `deep-reasoning` (slow: 4–40 s, avoid in daily use) |
 | `--text` | search, contents, similar | Include full page text (capped by `--maxchars`, default 1000) |
-| `--maxchars N` | search, contents | Max characters of page text per result |
+| `--maxchars N` | search, contents, similar | Max characters of page text per result (honored in both API & text output) |
 | `--no-dynamic` | search, contents, similar | Turn Dynamic Highlights off (default: ON via `Exa-Beta: dynamic-highlights-2026-08-28`) |
 | `--hlchars N` | search, contents, similar | Per-page highlight cap with dynamic off (mutually exclusive with dynamic) |
 | `--category C` | search | Exa category filter |
@@ -97,12 +100,13 @@ text excerpt. `--json` prints the raw Exa response.
 
 ## Config & keys
 
-`config.json` next to this file (git-ignored — NEVER commit it; see `config.example.json`).
-Resolution order:
+Prefer environment variables or `~/.agents/keys/*.key` (outside the skill directory) so
+plaintext keys are never accidentally bundled when syncing skills. Optional `config.json`
+next to this file is git-ignored (see `config.example.json`). Resolution order:
 
 | Engine | Key sources (first wins) |
 |---|---|
-| Exa | `EXA_API_KEY` env → `config.json` `apiKey` |
+| Exa | `EXA_API_KEY` env → `config.json` `apiKey` → `~/.agents/keys/exa.key` |
 | MiMo | `MIMO_API_KEY` env → `config.json` `mimoApiKey` → `~/.agents/keys/mimo.key` |
 
 Never print key values in chat, logs, or docs. Optional config fields: `baseUrl`,
@@ -110,8 +114,8 @@ Never print key values in chat, logs, or docs. Optional config fields: `baseUrl`
 
 ## Error handling
 
-- `401` — key invalid/expired: check the engine's key source (do not echo its value).
+- `401` — key invalid/expired: check the engine's active key source (do not echo its value).
 - MiMo `web_search` errors mentioning 联网/plugin — the account lacks the 联网服务 plugin.
 - `429` — rate limited; wait and retry, reduce `--num` / `--limit`.
-- `5xx` / network error — retry once; if persistent, offer the OTHER engine and let the
-  user decide (built-in WebSearch is unavailable in this setup).
+- `5xx` / timeout / network error — retry once; if persistent (and built-in WebSearch is
+  unavailable or insufficient), offer the OTHER engine and let the user decide.

@@ -1,13 +1,30 @@
 # OpenXML SDK Creation Reference
 
+## Quick Section Index (Progressive Disclosure — Jump by Line Range)
+
+Read **1. Build Commands** + **Common Traps** first, then load only the specific **4. Patterns** subsections your document needs.
+
+| Section | Lines |
+|---|---|
+| 1. Build Commands | L24–L38 |
+| Common Traps (read first) | L39–L99 |
+| Color & Typography | L100–L117 |
+| 2. Program.cs Setup | L118–L140 |
+| 3. Document Architecture | L141–L166 |
+| 4. Patterns | L167–L588 |
+| 5. Quality Gate | L589–L595 |
+| 6. Further References | L596–L604 |
+
+---
+
 Creating new Word documents with C# + OpenXML SDK.
 
-Workflow: Write `Program.cs` → `./scripts/docx build <output-path>` → deliver after validation passes.
+Workflow: Write `Program.cs` → `python scripts/docx_cli.py build <output-path>` → deliver after validation passes.
 
 ## 1. Build Commands
 
 ```bash
-./scripts/docx <command> [args]
+python scripts/docx_cli.py <command> [args]
 ```
 
 | Command | Purpose |
@@ -534,7 +551,7 @@ Mixed content: wrap RTL runs with `RightToLeft()`, LTR runs without. Set `Langua
 
 Word shapes (rounded rectangles, callout boxes, text boxes) require complex VML or DrawingML that is extremely error-prone to generate programmatically. **Use tables with borders, shading, and cell padding as visual alternatives.** This produces more reliable results with far less code.
 
-### 4.12 Pagination & Units
+### 4.14 Pagination & Units
 
 | Property | Class | Effect |
 |----------|-------|--------|
@@ -550,7 +567,7 @@ Word shapes (rounded rectangles, callout boxes, text boxes) require complex VML 
 | Half-points | font × 2 | 12pt = `"24"` |
 | EMU | 914400/inch, 360000/cm | A4 = 7560000 × 10692000 |
 
-### 4.13 Letterhead
+### 4.15 Letterhead
 
 Different first-page header via `TitlePage`. TRAP: `DifferentFirstPage` does NOT exist.
 
@@ -561,32 +578,11 @@ new SectionProperties(
     new HeaderReference { Type = HeaderFooterValues.Default, Id = defaultHeaderId }, ...)
 ```
 
-### 4.14 Background Images
+### 4.16 Background Images
 
 When a document includes a cover, generate the background via Playwright (HTML/SVG → 2× scale PNG → insert as floating anchor §4.5).
 
-**You must create each background from scratch.** The scripts in `scripts/generate_*.py` are style references only — read one to learn the HTML/SVG + Playwright screenshot technique, then write your OWN unique design. **Never call `generate_*.py` directly, never `subprocess.run` them, never reuse their PNG output.** Also never use user-uploaded images, stock photos, or any pre-existing file as a cover background.
-
-Design flow:
-1. Define the document's Colors class first (same hex values used everywhere)
-2. Read ONE `generate_*.py` script to learn the SVG technique (radial-gradient, curves, filters, etc.)
-3. Write new HTML/SVG from scratch — use the SAME hex values from your Colors class for the background
-4. Screenshot with Playwright at 2× scale: `page.screenshot(path=output, clip={...})` at 794×1123px
-5. Insert the PNG as a floating background (§4.5 CreateFloatingBackground)
-6. Cover text colors must come from the same Colors class — ensure contrast with the background you just generated
-
-In IPython: `subprocess.run(["python3", your_script, output_dir])` — sync Playwright can't run in existing event loop.
-
-Style references (read for technique inspiration, do NOT call or reuse output):
-
-| Script | Style | Good starting point for |
-|--------|-------|------------------------|
-| `generate_backgrounds.py` | Morandi soft curves | Gentle, organic designs |
-| `generate_inkwash_backgrounds.py` | Ink wash turbulence | CJK literary, gray-scale |
-| `generate_swiss_backgrounds.py` | Precise thin lines | Grid-based, minimal |
-| `generate_geometric_backgrounds.py` | Overlapping arcs | Bold geometric patterns |
-| `generate_gradient_backgrounds.py` | Smooth gradient bands | Elegant color transitions |
-| `generate_formal_backgrounds.py` | Double border + ornaments | Structured frame designs |
+**You must create each background from scratch.** Read `references/cover-background-guide.md` for all 6 Playwright + SVG visual recipes (Morandi curves, ink wash, Swiss grid, geometric arcs, gradient ribbons, formal double border) and the exact 2× scale rendering workflow, then write your own HTML/SVG using the document's `Colors` class and embed as a floating background (§4.5 `CreateFloatingBackground`).
 
 **Cover text must be visually distinct from body text.** Use significantly larger font size (48-96 half-points), different weight, and generous spacing (SpacingBetweenLines Before="4000-6000") to push the title away from the top edge. The cover should feel like a separate visual space, not just a bigger version of the first body paragraph.
 

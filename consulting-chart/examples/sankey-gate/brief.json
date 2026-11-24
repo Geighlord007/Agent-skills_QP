@@ -1,0 +1,11 @@
+{
+  "case": "sankey-gate",
+  "title": "桑基图:三节点测试",
+  "panel_title": "桑基图(测试用例)",
+  "purpose": "验证未实现语法的停止行为",
+  "decision": "无",
+  "story": "三个节点、两条连接,用于测试桑基图语法的门槛。",
+  "questions": ["流量如何分配?"],
+  "insights": [],
+  "source": "测试数据"
+}

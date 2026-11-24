@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "name": "house",
+  "font": "Arial, 'Helvetica Neue', 'Microsoft YaHei', 'PingFang SC', sans-serif",
+  "font_title": "Arial, 'Helvetica Neue', 'Microsoft YaHei', 'PingFang SC', sans-serif",
+  "kicker_color": "#6B6B6B",
+  "canvas": {"width": 1280, "height": 720},
+  "colors": {
+    "ink900": "#0A0A0A",
+    "ink700": "#333333",
+    "ink500": "#6B6B6B",
+    "ink400": "#8F8F8F",
+    "hair": "#D8D8D8",
+    "base": "#111111",
+    "primary": "#1B3FD8",
+    "accent": "#2972FF",
+    "second": "#7FA6F2",
+    "light": "#C7D8FF",
+    "step": "#BFBFBF",
+    "pos": "#17B3A6",
+    "neg": "#E0393E",
+    "band": "#D8F6EE",
+    "black": "#0A0A0A"
+  },
+  "type": {
+    "title": 28,
+    "panel": 13,
+    "value": 11,
+    "label": 10.5,
+    "note": 8.5
+  },
+  "lines": {"hair": 1, "base": 1.6, "dotted": "2 3"},
+  "category_colors": {
+    "Accounting": "black",
+    "Customer Service": "primary",
+    "Procurement": "second",
+    "Sales Support": "light"
+  }
+}

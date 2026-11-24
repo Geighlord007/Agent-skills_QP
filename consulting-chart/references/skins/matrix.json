@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "name": "matrix",
+  "style": "matrix",
+  "font": "Arial, 'Microsoft YaHei', 'PingFang SC', sans-serif",
+  "font_title": "Georgia, 'Times New Roman', SimSun, 'Microsoft YaHei', serif",
+  "kicker_color": "#6B6B6B",
+  "background": "#FFFFFF",
+  "canvas": {"width": 1211, "height": 853},
+  "colors": {
+    "ink900": "#0C2A14",
+    "ink700": "#333333",
+    "ink500": "#6B6B6B",
+    "ink400": "#8F8F8F",
+    "hair": "#D8D8D8",
+    "base": "#0C2A14",
+    "primary": "#4953BD",
+    "accent": "#18A8AF",
+    "second": "#18A8AF",
+    "light": "#CAFBBB",
+    "step": "#F1EEEA",
+    "pos": "#0C2A14",
+    "neg": "#E0393E",
+    "band": "#E3FDDB",
+    "teal_tint": "#DCFCF3",
+    "black": "#0C2A14",
+    "dark": "#0C2A14",
+    "panel": "#FFFFFF"
+  },
+  "type": {"title": 25, "panel": 13, "value": 11, "label": 10.5, "note": 8.5},
+  "lines": {"hair": 1, "base": 1.6, "dotted": "2 3"},
+  "category_colors": {}
+}

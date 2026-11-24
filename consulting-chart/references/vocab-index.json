@@ -1,0 +1,184 @@
+{
+  "source": "Financial Times visual-vocabulary (vendor/chart-doctor/visual-vocabulary/README.md)",
+  "domains": {
+    "deviation": {
+      "question": "相对基准/参考值偏离多少",
+      "candidates": [
+        "scenario_compare",
+        "tornado",
+        "waterfall"
+      ],
+      "ft_types": [
+        "Diverging bar",
+        "Diverging stacked bar",
+        "Spine chart",
+        "Surplus/deficit filled line"
+      ]
+    },
+    "correlation": {
+      "question": "两个变量是否相关",
+      "candidates": [
+        "bubble",
+        "heatmap",
+        "matrix_2x2",
+        "scatter"
+      ],
+      "ft_types": [
+        "Scatterplot",
+        "Line + Column",
+        "Connected scatterplot",
+        "Bubble",
+        "XY heatmap"
+      ]
+    },
+    "ranking": {
+      "question": "谁高谁低、排第几",
+      "candidates": [
+        "dot_strip",
+        "lollipop",
+        "ordered_bar",
+        "slope",
+        "tornado"
+      ],
+      "ft_types": [
+        "Ordered bar",
+        "Ordered column",
+        "Ordered proportional symbol",
+        "Dot strip plot",
+        "Slope",
+        "Lollipop chart"
+      ]
+    },
+    "distribution": {
+      "question": "数值如何分布",
+      "candidates": [
+        "boxplot",
+        "dot_strip",
+        "histogram",
+        "population_pyramid",
+        "violin"
+      ],
+      "ft_types": [
+        "Histogram",
+        "Boxplot",
+        "Violin plot",
+        "Population pyramid",
+        "Dot strip plot",
+        "Dot plot",
+        "Barcode plot",
+        "Cumulative curve"
+      ]
+    },
+    "magnitude": {
+      "question": "体量有多大",
+      "candidates": [
+        "bubble",
+        "lollipop",
+        "mekko",
+        "parallel_coordinates",
+        "radar",
+        "scenario_compare"
+      ],
+      "ft_types": [
+        "Column",
+        "Bar",
+        "Paired column",
+        "Paired bar",
+        "Proportional stacked bar",
+        "Proportional symbol",
+        "Isotype (pictogram)",
+        "Lollipop chart",
+        "Radar chart",
+        "Parallel coordinates"
+      ]
+    },
+    "spatial": {
+      "question": "空间/地理分布",
+      "candidates": [
+        "choropleth",
+        "flow_map",
+        "heatmap"
+      ],
+      "ft_types": [
+        "Basic choropleth (rate/ratio)",
+        "Proportional symbol (count/magnitde)",
+        "Flow map",
+        "Contour map",
+        "Equalised cartogram",
+        "Scaled cartogram (value)",
+        "Dot density",
+        "Heat map"
+      ]
+    },
+    "part-to-whole": {
+      "question": "构成与占比",
+      "candidates": [
+        "combo",
+        "composition",
+        "donut",
+        "funnel",
+        "issue_tree",
+        "mekko",
+        "partition_bridge",
+        "pie",
+        "treemap",
+        "waffle",
+        "waterfall"
+      ],
+      "ft_types": [
+        "Stacked column",
+        "Proportional stacked bar",
+        "Pie",
+        "Donut",
+        "Treemap",
+        "Voronoi",
+        "Arc",
+        "Gridplot",
+        "Venn",
+        "Waterfall"
+      ]
+    },
+    "change-over-time": {
+      "question": "随时间怎么变化",
+      "candidates": [
+        "annotated_narrative",
+        "combo",
+        "gantt",
+        "partition_bridge",
+        "roadmap",
+        "slope",
+        "small_multiples",
+        "waterfall"
+      ],
+      "ft_types": [
+        "Line",
+        "Column",
+        "Line + column",
+        "Stock price",
+        "Slope",
+        "Area chart",
+        "Fan chart (projection)",
+        "Connected scatterplot",
+        "Calendar heatmap",
+        "Priestley timeline",
+        "Circle timeline",
+        "Seismogram"
+      ]
+    },
+    "flow": {
+      "question": "",
+      "candidates": [
+        "flow_map",
+        "network",
+        "sankey"
+      ],
+      "ft_types": [
+        "Sankey (aka river plot)",
+        "Waterfall",
+        "Chord",
+        "Network"
+      ]
+    }
+  },
+  "generated_by": "scripts/import_ft_vocab.py"
+}

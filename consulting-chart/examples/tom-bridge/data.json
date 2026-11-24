@@ -1,0 +1,31 @@
+{
+  "baseline": {
+    "Accounting": 89,
+    "Customer Service": 45,
+    "Procurement": 34,
+    "Sales Support": 25
+  },
+  "levers": [
+    {"name": "Standardization Efficiency", "label": "标准化\n提效", "delta": -21},
+    {"name": "In-Sourced / Retained Scope", "label": "自营/\n保留范围", "delta": -21},
+    {"name": "Technology Gap / Operational Friction", "label": "技术差距/\n运营摩擦", "delta": -22}
+  ],
+  "in_scope": {
+    "Accounting": 66,
+    "Customer Service": 31,
+    "Procurement": 19,
+    "Sales Support": 13
+  },
+  "in_progress": {
+    "Accounting": 45,
+    "Customer Service": 23,
+    "Procurement": 19,
+    "Sales Support": 8
+  },
+  "residual": {
+    "Accounting": 21,
+    "Customer Service": 8,
+    "Procurement": 0,
+    "Sales Support": 5
+  }
+}

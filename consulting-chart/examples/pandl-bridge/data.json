@@ -1,0 +1,18 @@
+{
+  "show_pct": false,
+  "columns": [
+    {"kind": "start", "label": "Revenue", "value": 132},
+    {"kind": "delta", "label": "COGS", "segments": [
+      {"name": "Materials", "value": -40},
+      {"name": "Labor", "value": -16},
+      {"name": "Logistics", "value": -8}
+    ]},
+    {"kind": "subtotal", "label": "Gross Profit", "value": 68},
+    {"kind": "delta", "label": "OPEX", "segments": [
+      {"name": "Sales", "value": -18},
+      {"name": "R&D", "value": -12},
+      {"name": "G&A", "value": -11}
+    ]},
+    {"kind": "end", "label": "EBITDA", "value": 27}
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "sankey": true,
+  "nodes": ["A", "B", "C"],
+  "links": [
+    {"from": "A", "to": "B", "value": 5},
+    {"from": "B", "to": "C", "value": 3}
+  ]
+}

@@ -2,12 +2,18 @@
 Split a PDF by page ranges.
 
 Usage:
-    python scripts/split_pdf.py input.pdf output.pdf --pages "1-5,8,10-12"
+    python split_pdf.py input.pdf output.pdf --pages "1-5,8,10-12"
 """
 
 import argparse
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from lib import configure_stdio_utf8
+
+configure_stdio_utf8()
 
 
 def parse_pages(pages_spec: str, total_pages: int) -> list[int]:
@@ -15,10 +21,10 @@ def parse_pages(pages_spec: str, total_pages: int) -> list[int]:
     if not pages_spec or not pages_spec.strip():
         raise ValueError("Page ranges are required. Example: 1-5,8,10-12")
 
-    selected_pages = []
-    seen_pages = set()
+    selected_pages: list[int] = []
+    seen_pages: set[int] = set()
 
-    def add_page(page_number: int):
+    def add_page(page_number: int) -> None:
         if page_number < 1 or page_number > total_pages:
             raise ValueError(
                 f"Page {page_number} is out of range. Valid range: 1-{total_pages}"
@@ -53,10 +59,17 @@ def parse_pages(pages_spec: str, total_pages: int) -> list[int]:
 
 def split_pdf(input_path: Path, output_path: Path, pages_spec: str) -> tuple[int, int]:
     """Create a new PDF containing selected pages from the input PDF."""
+    if input_path.resolve() == output_path.resolve():
+        raise ValueError(
+            "Output path must differ from input path to avoid overwriting the source PDF"
+        )
+
     try:
         import pypdfium2 as pdfium
-    except ImportError:
-        raise RuntimeError("pypdfium2 is required. Install with: pip install pypdfium2")
+    except ImportError as e:
+        raise RuntimeError(
+            "pypdfium2 is required. Install with: pip install pypdfium2"
+        ) from e
 
     source_pdf = pdfium.PdfDocument(str(input_path))
     try:
@@ -91,19 +104,19 @@ def main() -> int:
     output_path = Path(args.output_pdf)
 
     if not input_path.exists():
-        print(f"ERROR: Input file not found: {input_path}")
+        print(f"ERROR: Input file not found: {input_path}", file=sys.stderr)
         return 1
     if input_path.suffix.lower() != ".pdf":
-        print(f"ERROR: Input must be a PDF file: {input_path}")
+        print(f"ERROR: Input must be a PDF file: {input_path}", file=sys.stderr)
         return 1
     if output_path.suffix.lower() != ".pdf":
-        print(f"ERROR: Output must be a PDF file: {output_path}")
+        print(f"ERROR: Output must be a PDF file: {output_path}", file=sys.stderr)
         return 1
 
     try:
         total_pages, kept_pages = split_pdf(input_path, output_path, args.pages)
     except Exception as e:
-        print(f"ERROR: {e}")
+        print(f"ERROR: {e}", file=sys.stderr)
         return 1
 
     print(f"Split complete: {output_path}")

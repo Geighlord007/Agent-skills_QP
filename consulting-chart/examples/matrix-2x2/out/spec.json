@@ -1,0 +1,91 @@
+{
+  "type": "matrix",
+  "title": "成本杠杆矩阵:Quick Wins 先做,Big Bets 单独立项",
+  "panel_title": "成本杠杆矩阵(影响 × 可行性)",
+  "items": [
+    {
+      "name": "Prompt caching",
+      "x": 0.78,
+      "y": 0.82,
+      "group": "Usage"
+    },
+    {
+      "name": "Batch API",
+      "x": 0.64,
+      "y": 0.7,
+      "group": "Usage"
+    },
+    {
+      "name": "Output limits",
+      "x": 0.86,
+      "y": 0.58,
+      "group": "Usage"
+    },
+    {
+      "name": "Context pruning",
+      "x": 0.46,
+      "y": 0.64,
+      "group": "Usage"
+    },
+    {
+      "name": "Model routing",
+      "x": 0.74,
+      "y": 0.34,
+      "group": "Infrastructure"
+    },
+    {
+      "name": "Serving stack",
+      "x": 0.58,
+      "y": 0.22,
+      "group": "Infrastructure"
+    },
+    {
+      "name": "GPU utilization",
+      "x": 0.9,
+      "y": 0.3,
+      "group": "Infrastructure"
+    },
+    {
+      "name": "Rate cards",
+      "x": 0.3,
+      "y": 0.76,
+      "group": "Contracting"
+    },
+    {
+      "name": "Volume commits",
+      "x": 0.24,
+      "y": 0.3,
+      "group": "Contracting"
+    }
+  ],
+  "groups": {
+    "Usage": "primary",
+    "Infrastructure": "accent",
+    "Contracting": "second"
+  },
+  "quadrants": {
+    "tl": "Small Wins",
+    "tr": "Quick Wins",
+    "bl": "Long-tail",
+    "br": "Big Bets"
+  },
+  "x_label": "Impact",
+  "y_label": "Feasibility",
+  "insights": [
+    [
+      "Quick Wins",
+      "Prompt caching、Batch API 位于高影响、高可行区,优先执行。"
+    ],
+    [
+      "Big Bets",
+      "GPU utilization 影响最大、可行性低,需单独立项。"
+    ],
+    [
+      "小影响项",
+      "Rate cards 属 Small Wins;Volume commits 属 Long-tail,暂缓。"
+    ]
+  ],
+  "source": "示例数据(2×2 用例)",
+  "_kind": "matrix",
+  "kicker": null
+}

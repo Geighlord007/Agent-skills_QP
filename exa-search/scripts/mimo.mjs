@@ -14,6 +14,8 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = join(__dirname, '..', 'config.json');
 const FALLBACK_KEY_PATH = join(homedir(), '.agents', 'keys', 'mimo.key');
+const TIMEOUT_MS = 60_000;
+
 const HELP = `
 MiMo web search CLI (server-side web_search tool; account needs the 联网服务 plugin)
   mimo.mjs search "query" [--model flash|pro|<model-id>] [--maxkw N] [--limit N]
@@ -25,6 +27,7 @@ MiMo web search CLI (server-side web_search tool; account needs the 联网服务
   --no-force   let the model decide whether to search (default: force search)
   --cites      print only the citation list (raw source rows)
   --json       print the raw API response
+  -h, --help   show this help message
 `;
 
 const MODEL_ALIASES = {
@@ -33,34 +36,52 @@ const MODEL_ALIASES = {
 };
 
 function loadConfig() {
+	let raw;
 	try {
-		return JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+		raw = readFileSync(CONFIG_PATH, 'utf8');
 	} catch {
+		return {};
+	}
+	try {
+		return JSON.parse(raw);
+	} catch (err) {
+		console.error(`WARN: failed to parse ${CONFIG_PATH}: ${err.message}`);
 		return {};
 	}
 }
 
 function resolveKey(config) {
-	if (process.env.MIMO_API_KEY && process.env.MIMO_API_KEY.length > 0) return process.env.MIMO_API_KEY;
-	if (config.mimoApiKey && config.mimoApiKey.length > 0) return config.mimoApiKey;
-	try {
-		return readFileSync(FALLBACK_KEY_PATH, 'utf8').trim();
-	} catch {
-		return '';
+	if (process.env.MIMO_API_KEY && process.env.MIMO_API_KEY.trim().length > 0) {
+		return { key: process.env.MIMO_API_KEY.trim(), source: 'MIMO_API_KEY env' };
 	}
+	if (config.mimoApiKey && String(config.mimoApiKey).trim().length > 0) {
+		return { key: String(config.mimoApiKey).trim(), source: 'config.json' };
+	}
+	try {
+		const raw = readFileSync(FALLBACK_KEY_PATH, 'utf8').trim();
+		if (raw.length > 0) return { key: raw, source: '~/.agents/keys/mimo.key' };
+	} catch { /* ignore */ }
+	return { key: '', source: '' };
+}
+
+function posInt(flag, raw) {
+	const n = Number(raw);
+	if (!Number.isInteger(n) || n <= 0) { console.error(`ERROR: ${flag} must be a positive integer`); process.exit(2); }
+	return n;
 }
 
 function parseArgs(argv) {
-	const positional = [];
-	const flags = {};
+	const positional = [], flags = {};
 	for (let i = 0; i < argv.length; i++) {
 		const a = argv[i];
-		if (a === '--model') flags.model = argv[++i];
-		else if (a === '--maxkw') flags.maxkw = Number(argv[++i]);
-		else if (a === '--limit') flags.limit = Number(argv[++i]);
+		if (a === '-h' || a === '--help') flags.help = true;
+		else if (a === '--model') flags.model = argv[++i];
+		else if (a === '--maxkw') flags.maxkw = posInt(a, argv[++i]);
+		else if (a === '--limit') flags.limit = posInt(a, argv[++i]);
 		else if (a === '--no-force') flags.noforce = true;
 		else if (a === '--cites') flags.cites = true;
 		else if (a === '--json') flags.json = true;
+		else if (a.startsWith('-')) { console.error(`ERROR: unknown option "${a}"`); process.exit(2); }
 		else positional.push(a);
 	}
 	return { positional, flags };
@@ -78,21 +99,26 @@ function trim(s, n = 240) {
 
 async function main() {
 	const config = loadConfig();
-	const key = resolveKey(config);
+	const keyInfo = resolveKey(config);
 	const [cmd, ...rest] = process.argv.slice(2);
-	if (!cmd || cmd === 'help' || cmd === '--help') {
+	if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
 		console.log(HELP);
 		process.exit(0);
 	}
 	const { positional, flags } = parseArgs(rest);
+	if (flags.help) {
+		console.log(HELP);
+		process.exit(0);
+	}
 
 	if (cmd !== 'search') {
+		console.error(`ERROR: unknown command "${cmd}".`);
 		console.log(HELP);
 		process.exit(2);
 	}
 	const query = positional.join(' ');
 	if (!query) { console.log(HELP); process.exit(2); }
-	if (!key) {
+	if (!keyInfo.key) {
 		console.error('ERROR: no MiMo API key. Set MIMO_API_KEY, put mimoApiKey in config.json, or create ~/.agents/keys/mimo.key.');
 		process.exit(2);
 	}
@@ -117,13 +143,18 @@ async function main() {
 			method: 'POST',
 			headers: {
 				'content-type': 'application/json',
-				authorization: `Bearer ${key}`,
+				authorization: `Bearer ${keyInfo.key}`,
 			},
 			body: JSON.stringify(body),
+			signal: AbortSignal.timeout(TIMEOUT_MS),
 		});
 		raw = await res.text();
 	} catch (err) {
-		console.error(`ERROR: network failure calling MiMo: ${err.message}`);
+		if (err && err.name === 'TimeoutError') {
+			console.error(`ERROR: MiMo request timed out after ${Math.round(TIMEOUT_MS / 1000)}s.`);
+		} else {
+			console.error(`ERROR: network failure calling MiMo: ${err.message}`);
+		}
 		process.exit(1);
 	}
 	const elapsed = Date.now() - t0;
@@ -135,7 +166,9 @@ async function main() {
 			detail = parsed.error?.message || parsed.error?.code || detail;
 		} catch { /* keep raw slice */ }
 		console.error(`ERROR: MiMo API returned HTTP ${res.status}: ${detail}`);
-		if (res.status === 401) console.error('Hint: the MiMo API key is invalid or expired (check https://mimo.mi.com).');
+		if (res.status === 401) {
+			console.error(`Hint: your MiMo API key (from ${keyInfo.source}) is invalid or expired (check https://mimo.mi.com).`);
+		}
 		if (/联网|plugin/i.test(detail)) console.error('Hint: web_search needs the 联网服务 plugin enabled on the MiMo account.');
 		process.exit(1);
 	}

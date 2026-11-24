@@ -1,0 +1,27 @@
+{
+  "matrix": true,
+  "x_label": "Impact",
+  "y_label": "Feasibility",
+  "groups": {
+    "Usage": "primary",
+    "Infrastructure": "accent",
+    "Contracting": "second"
+  },
+  "quadrants": {
+    "tl": "Small Wins",
+    "tr": "Quick Wins",
+    "bl": "Long-tail",
+    "br": "Big Bets"
+  },
+  "items": [
+    {"name": "Prompt caching", "x": 0.78, "y": 0.82, "group": "Usage"},
+    {"name": "Batch API", "x": 0.64, "y": 0.70, "group": "Usage"},
+    {"name": "Output limits", "x": 0.86, "y": 0.58, "group": "Usage"},
+    {"name": "Context pruning", "x": 0.46, "y": 0.64, "group": "Usage"},
+    {"name": "Model routing", "x": 0.74, "y": 0.34, "group": "Infrastructure"},
+    {"name": "Serving stack", "x": 0.58, "y": 0.22, "group": "Infrastructure"},
+    {"name": "GPU utilization", "x": 0.90, "y": 0.30, "group": "Infrastructure"},
+    {"name": "Rate cards", "x": 0.30, "y": 0.76, "group": "Contracting"},
+    {"name": "Volume commits", "x": 0.24, "y": 0.30, "group": "Contracting"}
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "type": "tornado",
+  "title": "敏感性排序:六个变量相对中点 20 的偏离",
+  "panel_title": "变量影响区间(两端值,中点 20)",
+  "labels": [
+    "Variable 1\n1.0 - 5.0",
+    "Variable 2\n11% - 15%",
+    "Variable 3\n$200 - $300",
+    "Variable 4\n$12 - $14",
+    "Variable 5\nOff - On",
+    "Variable 6\nLow - High"
+  ],
+  "low": [
+    19.5,
+    18,
+    15.5,
+    12,
+    32.5,
+    4
+  ],
+  "high": [
+    20.5,
+    22,
+    24.5,
+    28,
+    7.5,
+    36
+  ],
+  "midpoint": 20,
+  "insights": [
+    [
+      "最大影响",
+      "Variable 6 的区间 4–36,偏离中点最远。"
+    ],
+    [
+      "最小影响",
+      "Variable 1 的 19.5–20.5,几乎无影响。"
+    ]
+  ],
+  "source": "示例数据与配方:Python Graph Gallery web-tornado-chart(0BSD)",
+  "_kind": "tornado",
+  "kicker": "EXHIBIT 2"
+}

@@ -1,11 +1,9 @@
-# 单一 QA 入口 v3：结构 / 文本 / 格式 / 数字 一次跑完，任何阻断项不过即 exit 1
-# 用法: python qa_v3.py source.docx|pptx output translated.json translation.md [--numerals whitelist.json] [--render out.pdf]
-# 检查项:
-#   1 结构与文本（阻断）— PPTX: 回抽比对（文本、run 数量、分段切分、格式签名、key 集合）
-#                        DOCX: verify_structure.py（结构节点计数 + 译文覆盖）
-#   2 数字保真（阻断）— 已翻译元素的数字词元与原文一致；书写形式转换记入白名单后放行
-#   3 拼接一致（阻断）— 元素 parts 拼接与译文一致（去空白比对）
-#   4 渲染检查（可选）— 导出 PDF 后空白页与残留源语言扫描
+# -*- coding: utf-8 -*-
+"""单一 QA 入口 v4.3：结构 / 文本 / 格式 / 数字 / 渲染 一次跑完，任何阻断项不过即 exit 1。
+
+用法:
+  python qa_v3.py source.docx|pptx output translated.json translation.md [--numerals whitelist.json] [--render out.pdf]
+"""
 import json
 import re
 import subprocess
@@ -13,6 +11,9 @@ import sys
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
 NUM_RE = re.compile(r"\d+(?:\.\d+)?")
 
 
@@ -40,8 +41,6 @@ def load(path):
 
 
 def parts_joined(e):
-    # 按段落结构拼接 parts：段内 run 直接相连（与源文本 text 的拼法一致），
-    # 段间补换行，避免跨段数字词元粘连
     parts = e.get("parts", [])
     splits = e.get("para_splits") or []
     if len(splits) <= 1:
@@ -55,10 +54,10 @@ def parts_joined(e):
     return "\n".join(segs)
 
 
-def check_pptx_roundtrip(src_json, out_json, tr_json, problems):
-    src = {e["key"]: e for e in load(src_json)["elements"]}
-    out = {e["key"]: e for e in load(out_json)["elements"]}
-    tr = {e["key"]: e for e in load(tr_json)["elements"]}
+def check_pptx_roundtrip(src_data, out_data, tr_data, problems):
+    src = {e["key"]: e for e in src_data["elements"]}
+    out = {e["key"]: e for e in out_data["elements"]}
+    tr = {e["key"]: e for e in tr_data["elements"]}
     if set(src) != set(out):
         problems.append("key 集合与原件不一致: %s" % sorted(set(src) ^ set(out))[:10])
     for key, se in src.items():
@@ -75,12 +74,14 @@ def check_pptx_roundtrip(src_json, out_json, tr_json, problems):
             problems.append("%s：写回文本与译文不一致" % key)
 
 
-def check_numbers(src_json, tr_json, allow, problems):
-    src = {e["key"]: e for e in load(src_json)["elements"]}
-    for e in load(tr_json)["elements"]:
+def check_numbers(src_data, tr_data, allow, problems):
+    src = {e["key"]: e for e in src_data["elements"]}
+    for e in tr_data["elements"]:
         if "translated_text" not in e:
             continue
         key = e["key"]
+        if key not in src:
+            continue
         s_nums = NUM_RE.findall(src[key]["text"])
         t_nums = NUM_RE.findall(parts_joined(e))
         if sorted(s_nums) == sorted(t_nums):
@@ -91,55 +92,63 @@ def check_numbers(src_json, tr_json, allow, problems):
         problems.append("%s：数字词元不一致 原文=%s 译文=%s" % (key, s_nums, t_nums))
 
 
-def check_concat(tr_json, md_path, problems):
+def check_concat(tr_data, md_path, problems):
     blocks = parse_blocks(Path(md_path).read_text(encoding="utf-8"))
-    for e in load(tr_json)["elements"]:
+    for e in tr_data["elements"]:
         key = e["key"]
         if key in blocks and norm("\n".join(e["parts"])) != norm(blocks[key]):
             problems.append("%s：parts 拼接与译文不一致" % key)
 
 
-def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    if len(args) < 4:
-        raise SystemExit("用法: python qa_v3.py source output translated.json translation.md "
-                         "[--numerals whitelist.json] [--render out.pdf]")
-    src, out, tr_json, md = args[0], args[1], args[2], args[3]
+def run_qa(src: str, out: str, tr_json: str, md: str, numerals_path=None, render_pdf=None) -> int:
+    import contextlib
+    import io
+    import extract_docx_v2
+    import extract_v3
+
     allow = {}
-    if "--numerals" in sys.argv:
-        allow = load(sys.argv[sys.argv.index("--numerals") + 1])
+    if numerals_path:
+        allow = load(numerals_path)
         allow.pop("_comment", None)
 
     problems = []
-    tmp = Path(tr_json).parent
-    src_ex = tmp / "qa_src_extract.json"
-    subprocess.run([sys.executable, str(SCRIPTS / "extract_v3.py"), src, str(src_ex)],
-                   check=True, capture_output=True)
+    tr_data = load(tr_json)
+    src_path = Path(src)
     if str(src).lower().endswith(".pptx"):
-        out_ex = tmp / "qa_out_extract.json"
-        subprocess.run([sys.executable, str(SCRIPTS / "extract_v3.py"), out, str(out_ex)],
-                       check=True, capture_output=True)
-        check_pptx_roundtrip(str(src_ex), str(out_ex), tr_json, problems)
+        src_data = extract_v3.extract_pptx(src_path, include_notes=True)
+        out_data = extract_v3.extract_pptx(Path(out), include_notes=True)
+        check_pptx_roundtrip(src_data, out_data, tr_data, problems)
     else:
-        # 目标语言含 CJK 时 CJK 残留扫描属预期，改用 --expect-cjk 门（否则 EN→CJK 会被误报）
-        cjk_target = any(re.search(r"[一-鿿]", e.get("translated_text", ""))
-                         for e in load(tr_json)["elements"])
+        with contextlib.redirect_stdout(io.StringIO()):
+            src_data = extract_docx_v2.extract_docx(src_path, out_path=None)
+        cjk_target = any(
+            re.search(r"[\u4e00-\u9fff]", e.get("translated_text", ""))
+            for e in tr_data["elements"]
+        )
         cmd = [sys.executable, str(SCRIPTS / "verify_structure.py"), src, out, tr_json]
         if cjk_target:
             cmd.append("--expect-cjk")
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        print(res.stdout.strip())
+        res = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if res.stdout.strip():
+            print(res.stdout.strip())
         if res.returncode != 0:
             problems.append("DOCX 结构门未通过")
 
-    check_numbers(str(src_ex), tr_json, allow, problems)
-    check_concat(tr_json, md, problems)
+    check_numbers(src_data, tr_data, allow, problems)
+    check_concat(tr_data, md, problems)
 
-    if "--render" in sys.argv:
-        pdf = sys.argv[sys.argv.index("--render") + 1]
-        res = subprocess.run([sys.executable, str(SCRIPTS / "render_qa.py"), pdf, "--cjk-scan"],
-                             capture_output=True, text=True)
-        print(res.stdout.strip())
+    if render_pdf:
+        res = subprocess.run(
+            [sys.executable, str(SCRIPTS / "render_qa.py"), render_pdf, "--cjk-scan"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if res.stdout.strip():
+            print(res.stdout.strip())
+        if res.returncode != 0:
+            problems.append(f"渲染 QA 未通过（{render_pdf}）")
 
     if problems:
         print("QA 未通过，%d 项：" % len(problems))
@@ -148,6 +157,30 @@ def main():
         return 1
     print("QA 全部通过。")
     return 0
+
+
+def main() -> int:
+    pos = []
+    numerals_path = None
+    render_pdf = None
+    i = 1
+    while i < len(sys.argv):
+        a = sys.argv[i]
+        if a == "--numerals" and i + 1 < len(sys.argv):
+            numerals_path = sys.argv[i + 1]
+            i += 2
+        elif a == "--render" and i + 1 < len(sys.argv):
+            render_pdf = sys.argv[i + 1]
+            i += 2
+        else:
+            pos.append(a)
+            i += 1
+    if len(pos) < 4:
+        raise SystemExit(
+            "用法: python qa_v3.py source output translated.json translation.md "
+            "[--numerals whitelist.json] [--render out.pdf]"
+        )
+    return run_qa(pos[0], pos[1], pos[2], pos[3], numerals_path=numerals_path, render_pdf=render_pdf)
 
 
 if __name__ == "__main__":

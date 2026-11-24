@@ -1,0 +1,78 @@
+{
+  "type": "waterfall",
+  "columns": [
+    {
+      "kind": "start",
+      "label": "Revenue",
+      "value": 132
+    },
+    {
+      "kind": "delta",
+      "label": "COGS",
+      "segments": [
+        {
+          "name": "Materials",
+          "value": -40
+        },
+        {
+          "name": "Labor",
+          "value": -16
+        },
+        {
+          "name": "Logistics",
+          "value": -8
+        }
+      ]
+    },
+    {
+      "kind": "subtotal",
+      "label": "Gross Profit",
+      "value": 68
+    },
+    {
+      "kind": "delta",
+      "label": "OPEX",
+      "segments": [
+        {
+          "name": "Sales",
+          "value": -18
+        },
+        {
+          "name": "R&D",
+          "value": -12
+        },
+        {
+          "name": "G&A",
+          "value": -11
+        }
+      ]
+    },
+    {
+      "kind": "end",
+      "label": "EBITDA",
+      "value": 27
+    }
+  ],
+  "title": "从收入到 EBITDA:材料与销售费用是最大的两项扣减",
+  "panel_title": "P&L 桥接(Scenario 3,US$ M)",
+  "insights": [
+    [
+      "COGS 结构",
+      "材料 40 占 COGS 的 63%,是最大的单项成本。"
+    ],
+    [
+      "OPEX 结构",
+      "销售 18 最大;研发与管理合计 23。"
+    ],
+    [
+      "利润率",
+      "毛利率 51.5%,EBITDA 率 20.5%。"
+    ]
+  ],
+  "source": "示例数据(情景对比用例的 Scenario 3)",
+  "note": "COGS:材料 / 人工 / 物流;OPEX:销售 / 研发 / 管理。",
+  "show_pct": false,
+  "annotations": [],
+  "_kind": "bridge",
+  "kicker": null
+}

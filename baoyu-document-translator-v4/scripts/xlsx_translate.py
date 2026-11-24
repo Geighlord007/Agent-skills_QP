@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-"""XLSX translation without touching anything but the text (v2.2.2).
+"""XLSX translation without touching anything but the text (v4.3).
 
-Rewrites ONLY `xl/sharedStrings.xml` text nodes and `xl/workbook.xml` sheet names, so
-styles, number formats, charts, images, column widths and pivot definitions survive.
-(An .xlsx is the same kind of zip+XML container as .docx; cell text lives in the shared
-string table, which is why a text-level edit is enough.)
+Rewrites ONLY `xl/sharedStrings.xml` text nodes and `xl/workbook.xml` sheet names via
+`lxml.etree`, so styles, number formats, charts, images, column widths, rich-text runs,
+and pivot definitions survive without XML corruption.
 
 Usage:
   python xlsx_translate.py <src.xlsx> <dst.xlsx> <map.json>
@@ -14,57 +13,103 @@ map.json:
     "strings":     {"<source text>": "<translated text>", ...},
     "sheet_names": {"<source sheet name>": "<translated sheet name>"}
   }
-
-Notes / gotchas baked into this tool:
-  * Excel limits sheet names to 31 characters — longer names make Excel refuse the file.
-    Use "&amp;" (not a bare "&") if a translated sheet name contains an ampersand.
-  * shared strings are indexed: two cells showing the same source text share one entry,
-    so a translation applies to all of them.
-  * the CJK scan below reports what is left before/after; images are not text and will
-    keep their original language (report that to the user).
 """
-import json, re, sys, zipfile
+import json
+import re
+import sys
+import zipfile
+from lxml import etree
 
 CJK = re.compile(r"[\u4e00-\u9fff]")
+BAD_SHEET_CHARS = re.compile(r"[:\\/?*\[\]]")
+SS_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
 
 
 def scan(label, path):
-    z = zipfile.ZipFile(path)
     hits = {}
-    for n in z.namelist():
-        if not n.endswith(".xml"):
-            continue
-        t = z.read(n).decode("utf-8", "ignore")
-        flat = "".join(a or b for a, b in re.findall(
-            r"<(?:w:)?t[^>]*>([^<]*)</(?:w:)?t>|<a:t>([^<]*)</a:t>", t))
-        c = len(CJK.findall(flat))
-        samples = [x for x in re.findall(r"<t[^>]*>([^<]*)</t>", t) if CJK.search(x)][:4]
-        names = [x for x in re.findall(r'<sheet name="([^"]+)"', t) if CJK.search(x)]
-        if c or names:
-            hits[n] = (c, samples + ["sheet:" + x for x in names])
+    with zipfile.ZipFile(path) as z:
+        for n in z.namelist():
+            if not n.endswith(".xml"):
+                continue
+            t = z.read(n).decode("utf-8", "ignore")
+            flat = "".join(
+                a or b
+                for a, b in re.findall(
+                    r"<(?:w:)?t[^>]*>([^<]*)</(?:w:)?t>|<a:t>([^<]*)</a:t>", t
+                )
+            )
+            c = len(CJK.findall(flat))
+            samples = [x for x in re.findall(r"<t[^>]*>([^<]*)</t>", t) if CJK.search(x)][:4]
+            names = [x for x in re.findall(r'<sheet name="([^"]+)"', t) if CJK.search(x)]
+            if c or names:
+                hits[n] = (c, samples + ["sheet:" + x for x in names])
     print("[%s] CJK remaining: %s" % (label, hits or "none"))
     return hits
 
 
-def patch_shared_strings(xml, mapping):
-    out, pos, seen = [], 0, 0
-    for m in re.finditer(r"<si>(.*?)</si>", xml, re.S):
-        body = m.group(1)
-        tm = re.search(r"(<t[^>]*>)([^<]*)(</t>)", body)
-        new_body = body
-        if tm and tm.group(2) in mapping:
-            new_body = body[:tm.start(2)] + mapping[tm.group(2)] + body[tm.end(2):]
-        out.append(xml[pos:m.start()])
-        out.append("<si>" + new_body + "</si>")
-        pos = m.end()
-        seen += 1
-    out.append(xml[pos:])
-    return "".join(out), seen
+def _set_t_text(t_elem, text):
+    t_elem.text = text
+    if text and (text[0].isspace() or text[-1].isspace() or "\n" in text):
+        t_elem.set(XML_SPACE, "preserve")
+
+
+def patch_shared_strings(xml_bytes, mapping):
+    root = etree.fromstring(xml_bytes)
+    ns = {"s": SS_NS}
+    patched = 0
+    for si in root.findall("s:si", ns):
+        t_nodes = si.findall(".//s:t", ns)
+        if not t_nodes:
+            continue
+        if len(t_nodes) == 1:
+            src = t_nodes[0].text or ""
+            if src in mapping:
+                _set_t_text(t_nodes[0], mapping[src])
+                patched += 1
+            continue
+        # Rich-text <si> with multiple <r><t>: match per-run first, else full-cell text
+        any_run = False
+        for tn in t_nodes:
+            src = tn.text or ""
+            if src in mapping:
+                _set_t_text(tn, mapping[src])
+                any_run = True
+        if any_run:
+            patched += 1
+            continue
+        full = "".join(tn.text or "" for tn in t_nodes)
+        if full in mapping:
+            _set_t_text(t_nodes[0], mapping[full])
+            for tn in t_nodes[1:]:
+                tn.text = ""
+            patched += 1
+    return etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True), patched
+
+
+def patch_workbook(xml_bytes, name_map):
+    root = etree.fromstring(xml_bytes)
+    ns = {"s": SS_NS}
+    renamed = 0
+    for sheet in root.findall(".//s:sheet", ns):
+        old_name = sheet.get("name", "")
+        if old_name in name_map:
+            new_name = name_map[old_name]
+            if len(new_name) > 31:
+                raise SystemExit(f"ERROR: Sheet name exceeds Excel 31-char limit ({len(new_name)}): {new_name!r}")
+            if BAD_SHEET_CHARS.search(new_name):
+                raise SystemExit(f"ERROR: Sheet name contains illegal Excel character: {new_name!r}")
+            sheet.set("name", new_name)
+            renamed += 1
+    return etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True), renamed
 
 
 def main():
+    if len(sys.argv) < 4:
+        raise SystemExit("Usage: python xlsx_translate.py <src.xlsx> <dst.xlsx> <map.json>")
     src, dst, mapf = sys.argv[1], sys.argv[2], sys.argv[3]
-    M = json.load(open(mapf, encoding="utf-8"))
+    with open(mapf, encoding="utf-8") as fh:
+        M = json.load(fh)
     s_map, n_map = M.get("strings", {}), M.get("sheet_names", {})
     scan("before", src)
 
@@ -72,16 +117,11 @@ def main():
         items = zin.infolist()
         data = {i.filename: zin.read(i.filename) for i in items}
 
-    n_str = 0
-    for name in list(data):
-        if name == "xl/sharedStrings.xml":
-            xml, n_str = patch_shared_strings(data[name].decode("utf-8"), s_map)
-            data[name] = xml.encode("utf-8")
-        elif name == "xl/workbook.xml":
-            xml = data[name].decode("utf-8")
-            for cn, en in n_map.items():
-                xml = xml.replace('name="%s"' % cn, 'name="%s"' % en)
-            data[name] = xml.encode("utf-8")
+    n_str, n_sheets = 0, 0
+    if "xl/sharedStrings.xml" in data and s_map:
+        data["xl/sharedStrings.xml"], n_str = patch_shared_strings(data["xl/sharedStrings.xml"], s_map)
+    if "xl/workbook.xml" in data and n_map:
+        data["xl/workbook.xml"], n_sheets = patch_workbook(data["xl/workbook.xml"], n_map)
 
     with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zout:
         for i in items:
@@ -90,20 +130,20 @@ def main():
             zi.external_attr = i.external_attr
             zout.writestr(zi, data[i.filename])
 
-    print("shared strings patched: %d | sheet names mapped: %d" % (n_str, len(n_map)))
+    print("shared strings patched: %d | sheet names renamed: %d" % (n_str, n_sheets))
     scan("after", dst)
 
-    z = zipfile.ZipFile(dst)
-    print("strings  :", re.findall(r"<t[^>]*>([^<]*)</t>", z.read("xl/sharedStrings.xml").decode("utf-8")))
-    print("sheets   :", re.findall(r'<sheet name="([^"]+)"', z.read("xl/workbook.xml").decode("utf-8")))
-    for nm in [n for n in z.namelist() if n.endswith((".xml", ".rels"))]:
-        try:
-            from lxml import etree
-            etree.fromstring(z.read(nm))
-        except ImportError:
-            break
-        except Exception as e:
-            print("!! XML INVALID:", nm, e)
+    invalid = []
+    with zipfile.ZipFile(dst) as z:
+        for nm in [n for n in z.namelist() if n.endswith((".xml", ".rels"))]:
+            try:
+                etree.fromstring(z.read(nm))
+            except Exception as e:
+                invalid.append((nm, str(e)))
+                print("!! XML INVALID:", nm, e, file=sys.stderr)
+    if invalid:
+        raise SystemExit(1)
+    print("XML validation: OK")
 
 
 if __name__ == "__main__":

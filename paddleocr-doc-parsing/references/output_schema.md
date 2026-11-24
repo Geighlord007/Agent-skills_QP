@@ -1,23 +1,42 @@
-# PaddleOCR Document Parsing Output Schema
+# PaddleOCR Document Parsing Output Schema & CLI Reference
 
-This document defines the output envelope returned by `layout_caller.py`.
+This document defines the output formats and CLI flags of `scripts/layout_caller.py`.
 
-By default, `layout_caller.py` saves the JSON envelope to a unique file under the system temp directory and prints the absolute saved path to `stderr`. Use `--output` when you need a custom destination, or `--stdout` when you want to skip file saving and print JSON directly.
+## Compact `stdout` Summary (Default & `--md-out` Modes)
 
-## Output Envelope
-
-`layout_caller.py` wraps provider response in a stable structure:
+When `--stdout` is **not** set and parsing succeeds, `layout_caller.py` prints a single compact JSON summary to `stdout` so agents can inspect metadata without loading megabytes of raw layout coordinates into context:
 
 ```json
 {
   "ok": true,
-  "text": "Extracted text from all pages",
-  "result": { ... },  // raw provider response
+  "pages": 3,
+  "chars": 4520,
+  "markdown_path": "C:\\work\\report.md",
+  "json_path": null
+}
+```
+
+- When `--md-out <FILE>` is passed without `--output`, only the Markdown file is written (`json_path` is `null`).
+- When neither `--md-out` nor `--output` is passed, the full JSON envelope is auto-saved (compact, no `--pretty`) under `<system-temp>/paddleocr/doc-parsing/results/result_<timestamp>_<id>.json` and its path is printed to both `stderr` (`Result saved to: ...`) and `json_path`.
+- When both `--md-out` and `--output` are passed, both files are written.
+
+## Full JSON Envelope (`--output`, default temp file, or `--stdout`)
+
+On success:
+
+```json
+{
+  "ok": true,
+  "text": "Extracted markdown text joined across all pages with \\n\\n",
+  "result": { ... },
   "error": null
 }
 ```
 
-On error:
+On error (`ok: false`, exit code `1`):
+
+- No temp JSON or Markdown file is written.
+- The error envelope is printed directly to `stderr` (or `stdout` if `--stdout` was passed):
 
 ```json
 {
@@ -33,18 +52,15 @@ On error:
 
 ## Error Codes
 
-| Code           | Description                                                                 |
-| -------------- | --------------------------------------------------------------------------- |
-| `INPUT_ERROR`  | Invalid or unusable input (arguments, file source, format, types). |
-| `CONFIG_ERROR` | Missing or invalid API / client configuration.       |
-| `API_ERROR`    | Request or response handling failed (network, HTTP, body parsing, schema). |
+| Code           | Description                                                              |
+| -------------- | ------------------------------------------------------------------------ |
+| `INPUT_ERROR`  | Invalid arguments, missing/empty/>50 MB local file, or unsupported type. |
+| `CONFIG_ERROR` | Missing or invalid `PADDLEOCR_DOC_PARSING_API_URL` or token.             |
+| `API_ERROR`    | Network failure, timeout, HTTP error (403/429/5xx), or invalid JSON.     |
 
-## Raw Result Notes
+## Raw Provider Result (`result`)
 
-The `result` field contains raw provider output.  
-Raw fields may vary by model version and endpoint.
-
-## Raw Result Example
+Raw fields may vary slightly by model (`PaddleOCR-VL-1.6`, `PaddleOCR-VL-1.5`, `PP-StructureV3`). Typical structure:
 
 ```json
 {
@@ -54,13 +70,12 @@ Raw fields may vary by model version and endpoint.
   "result": {
     "layoutParsingResults": [
       {
-        "prunedResult": { ... },  // layout elements with position/content/confidence information
+        "prunedResult": { ... },
         "markdown": {
-          "text": "Full page content in markdown/HTML format",
+          "text": "Full page content in Markdown/HTML format",
           "images": {
             "imgs/filename.jpg": "https://..."
-          },
-          "...": "other model-specific fields"
+          }
         }
       }
     ]
@@ -68,38 +83,30 @@ Raw fields may vary by model version and endpoint.
 }
 ```
 
-## Important Fields
+Key paths relative to the envelope root:
 
-Paths are relative to the output envelope root.
+- `text` — Full document Markdown concatenated across all pages (`\n\n`-separated).
+- `result.result.layoutParsingResults[n].markdown.text` — Page `n` Markdown.
+- `result.result.layoutParsingResults[n].prunedResult` — Page `n` structured layout elements (regions, polygons, labels, confidence).
 
-- `result.result.layoutParsingResults[n].prunedResult`  
-  Structured parsing data for page `n` (layout elements, locations, content, confidence, and related metadata).
+## CLI Command Examples (Single-Line, Cross-Platform)
 
-- `result.result.layoutParsingResults[n].markdown`  
-  Rendered output for page `n`.
+```powershell
+# Recommended: save clean Markdown directly
+python "<skill-dir>/scripts/layout_caller.py" --file-path "./report.pdf" --md-out "./report.md"
 
-- `result.result.layoutParsingResults[n].markdown.text`  
-  Full page markdown text.
+# Save both Markdown and pretty-printed raw JSON
+python "<skill-dir>/scripts/layout_caller.py" --file-path "./report.pdf" --md-out "./report.md" --output "./report.json" --pretty
 
-## Text Extraction
+# Phone-captured or skewed scan with orientation + unwarp enabled
+python "<skill-dir>/scripts/layout_caller.py" --file-path "./photo.jpg" --use-orientation-classify --use-unwarping --md-out "./photo.md"
 
-`layout_caller.py` extracts top-level `text` from `result.result.layoutParsingResults[n].markdown.text` and joins pages with `\n\n`.
+# Pass any extra model-specific API option
+python "<skill-dir>/scripts/layout_caller.py" --file-url "https://example.com/doc.pdf" --option visualize=true --output "./out.json"
 
-## Command Examples
+# Explicit file type override (0=PDF, 1=Image)
+python "<skill-dir>/scripts/layout_caller.py" --file-url "https://example.com/download?id=42" --file-type 0 --md-out "./doc.md"
 
-```bash
-# Parse document from URL (result auto-saves to the system temp directory)
-python scripts/layout_caller.py --file-url "URL" --pretty
-
-# Parse local file (result auto-saves to the system temp directory)
-python scripts/layout_caller.py --file-path "doc.pdf" --pretty
-
-# Parse with explicit file type
-python scripts/layout_caller.py --file-url "URL" --file-type 1 --pretty
-
-# Save result to a custom file path
-python scripts/layout_caller.py --file-url "URL" --output "./result.json" --pretty
-
-# Print JSON to stdout without saving a file
-python scripts/layout_caller.py --file-url "URL" --stdout --pretty
+# Print full JSON envelope to stdout without saving files
+python "<skill-dir>/scripts/layout_caller.py" --file-url "https://example.com/doc.pdf" --stdout
 ```

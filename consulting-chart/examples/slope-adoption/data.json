@@ -1,0 +1,12 @@
+{
+  "slope": true,
+  "t1": "2021",
+  "t2": "2025",
+  "entities": [
+    {"name": "North", "from": 10, "to": 18},
+    {"name": "East", "from": 8, "to": 14},
+    {"name": "South", "from": 12, "to": 13},
+    {"name": "West", "from": 15, "to": 27},
+    {"name": "Central", "from": 6, "to": 9}
+  ]
+}

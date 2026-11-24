@@ -1,0 +1,37 @@
+{
+  "type": "waffle",
+  "title": "AI 使用状态:45% 已日常使用,55% 仍在试点或规划",
+  "panel_title": "组织 AI 使用状态(100 格 = 100%)",
+  "parts": [
+    {
+      "name": "Daily use",
+      "value": 45
+    },
+    {
+      "name": "Piloting",
+      "value": 30
+    },
+    {
+      "name": "Planning",
+      "value": 25
+    }
+  ],
+  "cells": 100,
+  "insights": [
+    [
+      "日常使用",
+      "45 格已日常使用,接近半数。"
+    ],
+    [
+      "试点",
+      "30 格处于试点,是最近的转化来源。"
+    ],
+    [
+      "规划",
+      "25 格仍在规划,尚未启动。"
+    ]
+  ],
+  "source": "示例数据(华夫图用例)",
+  "_kind": "waffle",
+  "kicker": null
+}
