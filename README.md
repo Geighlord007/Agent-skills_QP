@@ -87,7 +87,6 @@ cd ~/.agents/skills && git pull   # 日常更新
 ├── exa-search/                    ← MiMo（中文）+ Exa（英文/语义）双引擎搜索
 ├── exhibition-notes/              ← 展会照片/录音时间轴对齐与嵌图纪要 .docx
 ├── find-skills/
-├── frontend-design/
 ├── h3-prompt-writing/
 ├── impeccable/
 ├── jev-browser/                   ← jev-ultrafast 网页自动化引擎手册 + 混合接管协议
