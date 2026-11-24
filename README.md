@@ -72,25 +72,30 @@ cd ~/.agents/skills && git pull   # 日常更新
 ~/.agents/skills/
 ├── README.md
 ├── .gitignore
-├── agent-reach/               ← 技能(每个含 SKILL.md)
-├── baoyu-document-translator-v3.6/
-├── baoyu-document-translator-v4/
+├── agent-reach/                   ← 多平台只读采集路由器（小红书/X/B站/Reddit/Boss直聘/雪球等）
+├── api-and-interface-design/
+├── baoyu-document-translator-v4/  ← DOCX/PPTX/XLSX 保格式整篇翻译（Mode A 子代理 + Mode B 视觉接口）
 ├── baoyu-translate/
-├── bio-research/
-├── company-bg-info/
-├── cosmetic-research/
+├── bio-research/                  ← 生命科学/生物技术英文深度调研报告
+├── company-bg-info/               ← 合作方/客户背景简报（BG Info .docx）
+├── consulting-chart/              ← 咨询级图表总控（112 配方 kb/ + Tier 1-3 漏斗 + Scale Law）
+├── cosmetic-research/             ← 化妆品原料多维度调研报告
 ├── deep-research/
-├── docx/
-├── exhibition-notes/
+├── design-taste-frontend/
+├── docx/                          ← Word 全生命周期处理（C# 生成 + Linux/WSL2 WIR + surgical + Route 4 精修验尸）
+├── eli5/                          ← 单文件图文大白话解释器
+├── exa-search/                    ← MiMo（中文）+ Exa（英文/语义）双引擎搜索
+├── exhibition-notes/              ← 展会照片/录音时间轴对齐与嵌图纪要 .docx
 ├── find-skills/
-├── jev-browser/                ← jev-ultrafast 网页自动化引擎手册 + 混合接管协议 + 查价子域配方
-├── literature-search/
-├── paddleocr-doc-parsing/
-├── pubmed-database/
-├── qwen-asr-transcribe/
-├── scienceskillscommon/       ← 共享 Python 库(非独立技能,见 frontmatter 规范)
-├── wechat-bridge/
-└── tools/                     ← 本机工具(如 cli-in-wechat),不进 git,需手动保留
+├── frontend-design/
+├── h3-prompt-writing/
+├── impeccable/
+├── jev-browser/                   ← jev-ultrafast 网页自动化引擎手册 + 混合接管协议
+├── paddleocr-doc-parsing/         ← 复杂 PDF/扫描件版面解析（表格/公式/阅读顺序）
+├── qwen-transcribe/               ← 百炼 Qwen 音视频转写、会议纪要、qwen3.8 视频理解与素材收集
+├── scienceskillscommon/           ← 共享 Python 库（非独立技能，见 frontmatter 规范）
+├── synbio-weekly/                 ← 合成生物行业双语周简报（PAPER-INK 纸墨编辑体）
+└── tools/                         ← 本机工具（不进 git，需手动保留）
 ```
 
 ## 技能规范(SKILL.md frontmatter)

@@ -1,5 +1,8 @@
 # CHANGELOG — baoyu-document-translator
 
+> **历史标签取回**（原根 `VERSION_HISTORY.md` 已合并至此）：查看旧版单文件可执行 `git show <标签>:baoyu-document-translator-<版本>/SKILL.md`；查看完整目录见 GitHub 标签页 `https://github.com/Geighlord007/Agent-skills_QP/tree/<标签>`（常用标签：`v3` / `v3.5` / `v3.6` / `v4` / `v4.1` / `v4.2`）。
+> **实测 Token 对比**：`v3.5` 子代理路线整链约 486 万 token → `v4.1` 接口直调路线降至约 35 万 token；`v1` 旧 `python-docx` 路线已于 2026-09-23 移除（`git log --diff-filter=D --name-only -- baoyu-document-translator`）。
+
 ## 能力范围（v1 → 现在）
 
 | Area | v1 | 现在 |
@@ -12,6 +15,12 @@
 | QA | Text-level only | 可选质检包：structure gate + rendered QA (blanks/CJK/TOC/montage) + regression selftest |
 | Terminology/style | Not wired to baoyu-translate preferences | 全文理解产物 `01-context.md` + 用户确认的翻译规格单 + EXTEND.md 设置三者合并使用 |
 | 翻译质量 | 译者各自决定语域与缩写处置 | 全文理解 → 规格确认 → 并行翻译（带页面语境）→ 独立审校 → 跨区块统一 |
+
+## 4.3.0 (2026-11-25) — 合并 v3.6 双模式与统一 CLI 入口
+
+### Changed
+- 合并原 `baoyu-document-translator-v3.6` 为本技能一等公民 **Mode A（原生子代理 + 纯文本分块）**，与 **Mode B（整页视觉 + 接口直调）** 共用同一套内核，退役独立 `v3.6` 目录。
+- 新增统一命令行入口 `scripts/doc_trans.py`，修复 `write_docx_wir.py` 对齐真实 WIR 接口（Linux/WSL2 保留 WIR `.so` 优先路由），清理废弃 v2 遗留脚本；`doc_trans.py selftest` 27/27 通过。
 
 ## 4.2.0 (2026-10-10) — 切分机制加固
 
